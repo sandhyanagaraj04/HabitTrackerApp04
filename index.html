@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>Habit Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────── -->
+<header class="app-header">
+  <div class="header-top">
+    <div class="app-brand">
+      <span class="brand-icon">✦</span>
+      <span class="brand-name">Habit Tracker</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="exportBtn" title="Export Data">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="icon-btn" id="streakBtn" title="Streak">
+        <span id="streakDisplay">🔥 0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Date Navigation -->
+  <div class="date-nav">
+    <button class="date-arrow" id="prevDay">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="date-center">
+      <div class="date-label" id="dateLabel">Today</div>
+      <div class="date-full" id="dateFull"></div>
+    </div>
+    <button class="date-arrow" id="nextDay">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+
+  <!-- Week Strip -->
+  <div class="week-strip" id="weekStrip"></div>
+</header>
+
+<!-- ── CATEGORY TABS ──────────────────────────────────── -->
+<div class="tabs-container">
+  <div class="tabs" id="categoryTabs">
+    <button class="tab active" data-tab="health">
+      <span class="tab-icon">💚</span>
+      <span class="tab-label">Health</span>
+      <span class="tab-badge" id="healthBadge">0%</span>
+    </button>
+    <button class="tab" data-tab="sadhana">
+      <span class="tab-icon">🔮</span>
+      <span class="tab-label">Sadhana</span>
+      <span class="tab-badge" id="sadhanaBadge">0%</span>
+    </button>
+    <button class="tab" data-tab="t">
+      <span class="tab-icon">⚡</span>
+      <span class="tab-label">T</span>
+      <span class="tab-badge" id="tBadge">—</span>
+    </button>
+    <button class="tab" data-tab="export">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">Export</span>
+    </button>
+  </div>
+</div>
+
+<!-- ── MAIN CONTENT ───────────────────────────────────── -->
+<main class="main-content">
+
+  <!-- ── HEALTH TAB ──────────────────────────────────── -->
+  <section class="tab-section active" id="tab-health">
+
+    <!-- Sleep Card -->
+    <div class="card card-health">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-emoji">😴</span>
+          <h2 class="card-title">Sleep</h2>
+        </div>
+        <div class="card-progress-ring">
+          <svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-fill ring-health" id="sleepRing" cx="18" cy="18" r="15.9" stroke-dasharray="0 100"/></svg>
+          <span id="sleepPct">0%</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Sleeping Time</label>
+            <input type="time" class="input-time" id="sleepTime" data-field="sleep_time">
+          </div>
+          <div class="field">
+            <label class="field-label">Waking Time</label>
+            <input type="time" class="input-time" id="wakeTime" data-field="wake_time">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Hours of Sleep</label>
+            <div class="computed-display" id="sleepHours">
+              <span class="computed-value">—</span>
+              <span class="computed-unit">hrs</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Sleep Quality</label>
+            <div class="star-rating" id="sleepQuality" data-field="sleep_quality">
+              <span class="star" data-val="1">★</span>
+              <span class="star" data-val="2">★</span>
+              <span class="star" data-val="3">★</span>
+              <span class="star" data-val="4">★</span>
+              <span class="star" data-val="5">★</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone Greyscale Card -->
+    <div class="card card-health">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-emoji">📱</span>
+          <h2 class="card-title">Phone</h2>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Greyscale On At</label>
+            <input type="time" class="input-time" id="greyscaleOn" data-field="greyscale_on">
+          </div>
+          <div class="field">
+            <label class="field-label">Greyscale Hours</label>
+            <div class="computed-display" id="greyscaleHours">
+              <span class="computed-value">—</span>
+              <span class="computed-unit">hrs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Card -->
+    <div class="card card-health">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-emoji">🏃</span>
+          <h2 class="card-title">Activity</h2>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Steps</label>
+            <div class="number-input-group">
+              <button class="num-btn" data-target="stepsInput" data-delta="-500">−</button>
+              <input type="number" class="input-number" id="stepsInput" data-field="steps" placeholder="0" min="0">
+              <button class="num-btn" data-target="stepsInput" data-delta="500">+</button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Heart Points</label>
+            <div class="number-input-group">
+              <button class="num-btn" data-target="heartInput" data-delta="-5">−</button>
+              <input type="number" class="input-number" id="heartInput" data-field="heart_points" placeholder="0" min="0">
+              <button class="num-btn" data-target="heartInput" data-delta="5">+</button>
+            </div>
+          </div>
+        </div>
+        <!-- Steps Progress Bar -->
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-label">
+            <span>Steps Goal (10,000)</span>
+            <span id="stepsGoalPct">0%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill progress-health" id="stepsBar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meals Card -->
+    <div class="card card-health">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-emoji">🍽️</span>
+          <h2 class="card-title">Meals</h2>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <div class="meal-block">
+          <div class="meal-header">
+            <span class="meal-icon">🌅</span>
+            <span class="meal-name">Breakfast</span>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label">Source</label>
+              <select class="input-select" data-field="breakfast_source">
+                <option value="">— Select —</option>
+                <option value="home">🏠 Home</option>
+                <option value="outside">🏪 Outside</option>
+                <option value="ordered">📦 Ordered In</option>
+                <option value="canteen">🏢 Canteen</option>
+                <option value="skipped">⏭️ Skipped</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">What did you eat?</label>
+            <input type="text" class="input-text" data-field="breakfast" placeholder="e.g. Oats with banana...">
+          </div>
+        </div>
+
+        <div class="meal-divider"></div>
+
+        <div class="meal-block">
+          <div class="meal-header">
+            <span class="meal-icon">☀️</span>
+            <span class="meal-name">Lunch</span>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label">Source</label>
+              <select class="input-select" data-field="lunch_source">
+                <option value="">— Select —</option>
+                <option value="home">🏠 Home</option>
+                <option value="outside">🏪 Outside</option>
+                <option value="ordered">📦 Ordered In</option>
+                <option value="canteen">🏢 Canteen</option>
+                <option value="skipped">⏭️ Skipped</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">What did you eat?</label>
+            <input type="text" class="input-text" data-field="lunch" placeholder="e.g. Rice and dal...">
+          </div>
+        </div>
+
+        <div class="meal-divider"></div>
+
+        <div class="meal-block">
+          <div class="meal-header">
+            <span class="meal-icon">🌤️</span>
+            <span class="meal-name">Snack</span>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label">Source</label>
+              <select class="input-select" data-field="snack_source">
+                <option value="">— Select —</option>
+                <option value="home">🏠 Home</option>
+                <option value="outside">🏪 Outside</option>
+                <option value="ordered">📦 Ordered In</option>
+                <option value="canteen">🏢 Canteen</option>
+                <option value="skipped">⏭️ Skipped</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">What did you eat?</label>
+            <input type="text" class="input-text" data-field="snack" placeholder="e.g. Fruits, nuts...">
+          </div>
+        </div>
+
+        <div class="meal-divider"></div>
+
+        <div class="meal-block">
+          <div class="meal-header">
+            <span class="meal-icon">🌙</span>
+            <span class="meal-name">Dinner</span>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label">Source</label>
+              <select class="input-select" data-field="dinner_source">
+                <option value="">— Select —</option>
+                <option value="home">🏠 Home</option>
+                <option value="outside">🏪 Outside</option>
+                <option value="ordered">📦 Ordered In</option>
+                <option value="canteen">🏢 Canteen</option>
+                <option value="skipped">⏭️ Skipped</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">What did you eat?</label>
+            <input type="text" class="input-text" data-field="dinner" placeholder="e.g. Roti and vegetables...">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── SADHANA TAB ─────────────────────────────────── -->
+  <section class="tab-section" id="tab-sadhana">
+
+    <div class="card card-sadhana">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-emoji">🙏</span>
+          <h2 class="card-title">Sadhana</h2>
+        </div>
+        <div class="card-progress-ring">
+          <svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-fill ring-sadhana" id="sadhanaRing" cx="18" cy="18" r="15.9" stroke-dasharray="0 100"/></svg>
+          <span id="sadhanaPct">0%</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-subtitle">Your daily spiritual practices</p>
+
+        <div class="practice-list">
+
+          <div class="practice-item" data-practice="guru_pooja">
+            <div class="practice-info">
+              <span class="practice-icon">🪔</span>
+              <div>
+                <div class="practice-name">Guru Pooja</div>
+                <div class="practice-desc">Daily reverence & offering</div>
+              </div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" class="sadhana-check" data-field="guru_pooja">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="practice-item" data-practice="upa_yoga">
+            <div class="practice-info">
+              <span class="practice-icon">🌀</span>
+              <div>
+                <div class="practice-name">Upa Yoga</div>
+                <div class="practice-desc">Activating the system</div>
+              </div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" class="sadhana-check" data-field="upa_yoga">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="practice-item" data-practice="surya_kriya">
+            <div class="practice-info">
+              <span class="practice-icon">☀️</span>
+              <div>
+                <div class="practice-name">Surya Kriya</div>
+                <div class="practice-desc">Solar energy alignment</div>
+              </div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" class="sadhana-check" data-field="surya_kriya">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="practice-item" data-practice="yoga_namaskar">
+            <div class="practice-info">
+              <span class="practice-icon">🧘</span>
+              <div>
+                <div class="practice-name">Yoga Namaskar</div>
+                <div class="practice-desc">Salutation to the sun</div>
+              </div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" class="sadhana-check" data-field="yoga_namaskar">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="practice-item" data-practice="sck">
+            <div class="practice-info">
+              <span class="practice-icon">⚡</span>
+              <div>
+                <div class="practice-name">SCK</div>
+                <div class="practice-desc">Shakti Chalana Kriya</div>
+              </div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" class="sadhana-check" data-field="sck">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+        </div>
+
+        <!-- Sadhana completion banner -->
+        <div class="completion-banner" id="sadhanaBanner" style="display:none">
+          <span>✨ All practices complete today!</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── T TAB ───────────────────────────────────────── -->
+  <section class="tab-section" id="tab-t">
+    <div class="card card-t">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-emoji">⚡</span>
+          <h2 class="card-title">T</h2>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="placeholder-msg">
+          <div class="placeholder-icon">🚧</div>
+          <p class="placeholder-title">Category coming soon</p>
+          <p class="placeholder-sub">Your message was cut off — please share the habits for this category and I'll add them right away.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── EXPORT TAB ─────────────────────────────────── -->
+  <section class="tab-section" id="tab-export">
+
+    <div class="card card-export">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-emoji">📊</span>
+          <h2 class="card-title">Export Data</h2>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-subtitle">Choose a date range and export format</p>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">From</label>
+            <input type="date" class="input-date" id="exportFrom">
+          </div>
+          <div class="field">
+            <label class="field-label">To</label>
+            <input type="date" class="input-date" id="exportTo">
+          </div>
+        </div>
+
+        <div class="export-quick-ranges">
+          <button class="range-btn" data-range="7">Last 7 days</button>
+          <button class="range-btn" data-range="30">Last 30 days</button>
+          <button class="range-btn" data-range="90">Last 90 days</button>
+          <button class="range-btn" data-range="all">All data</button>
+        </div>
+
+        <div class="export-options">
+          <div class="export-option-label">Export category:</div>
+          <div class="export-cats">
+            <label class="export-cat-check"><input type="checkbox" value="health" checked> 💚 Health</label>
+            <label class="export-cat-check"><input type="checkbox" value="sadhana" checked> 🔮 Sadhana</label>
+          </div>
+        </div>
+
+        <div class="export-buttons">
+          <button class="export-btn export-btn-csv" id="exportCSV">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Export CSV
+          </button>
+          <button class="export-btn export-btn-xlsx" id="exportXLSX">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Export Excel (.xlsx)
+          </button>
+        </div>
+
+        <div class="data-summary" id="dataSummary"></div>
+
+      </div>
+    </div>
+
+    <div class="card card-export">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-emoji">🗑️</span>
+          <h2 class="card-title">Manage Data</h2>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-subtitle">Danger zone — these actions cannot be undone</p>
+        <button class="danger-btn" id="clearAllBtn">Clear All Data</button>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- ── TOAST ──────────────────────────────────────────── -->
+<div id="toast" class="toast"></div>
+
+<!-- ── CONFIRM MODAL ──────────────────────────────────── -->
+<div class="modal-overlay" id="confirmModal" style="display:none">
+  <div class="modal">
+    <h3 class="modal-title" id="confirmTitle">Are you sure?</h3>
+    <p class="modal-body" id="confirmBody"></p>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-cancel" id="confirmCancel">Cancel</button>
+      <button class="modal-btn modal-btn-danger" id="confirmOk">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
