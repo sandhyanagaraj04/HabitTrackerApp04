@@ -12,12 +12,20 @@ const MONTH_NAMES = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
 
 /* ── FIREBASE INIT ──────────────────────────────────────── */
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.firestore();
+// If the config still has placeholder values, run in offline/localStorage mode
+const FIREBASE_CONFIGURED = firebaseConfig.apiKey !== 'PASTE_YOUR_API_KEY';
+
+let auth = null;
+let db   = null;
+
+if (FIREBASE_CONFIGURED) {
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db   = firebase.firestore();
+}
 
 /* ── STATE ──────────────────────────────────────────────── */
-let currentUser = null;
+let currentUser = FIREBASE_CONFIGURED ? null : { uid: 'local', displayName: 'You' };
 let currentDate = todayStr();
 let data        = {};        // in-memory cache: { [dateStr]: dayObject }
 let saveTimer   = null;      // debounce handle for Firestore writes
@@ -96,9 +104,13 @@ function getDayData(dateStr) {
   return data[dateStr];
 }
 
-/* ── FIRESTORE SAVE (debounced) ─────────────────────────── */
+/* ── SAVE (localStorage or Firestore) ───────────────────── */
 function saveData() {
   if (!currentUser) return;
+  if (!FIREBASE_CONFIGURED) {
+    localStorage.setItem('habitTracker_v1', JSON.stringify(data));
+    return;
+  }
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     const dayData = data[currentDate] || defaultDay();
@@ -109,8 +121,13 @@ function saveData() {
   }, 800);
 }
 
-/* ── FIRESTORE LOAD ─────────────────────────────────────── */
+/* ── LOAD (localStorage or Firestore) ───────────────────── */
 async function loadAllData() {
+  if (!FIREBASE_CONFIGURED) {
+    try { data = JSON.parse(localStorage.getItem('habitTracker_v1') || '{}'); }
+    catch { data = {}; }
+    return;
+  }
   try {
     const snap = await db.collection('users').doc(currentUser.uid)
                          .collection('days').get();
@@ -549,26 +566,37 @@ function signOut() {
 }
 
 /* ── AUTH STATE LISTENER ────────────────────────────────── */
-auth.onAuthStateChanged(async user => {
-  if (user) {
-    currentUser = user;
-    showLoading(true);
-    showLogin(false);
+async function startApp() {
+  showLoading(true);
+  await loadAllData();
+  renderUserMenu(currentUser);
+  renderAll();
+  showLoading(false);
+}
 
-    await loadAllData();
-
-    renderUserMenu(user);
-    renderAll();
-    showLoading(false);
-    showToast(`👋 Welcome back, ${user.displayName?.split(' ')[0] || 'there'}!`);
-  } else {
-    currentUser = null;
-    data        = {};
-    showLoading(false);
-    showLogin(true);
-    renderUserMenu(null);
-  }
-});
+if (!FIREBASE_CONFIGURED) {
+  // No Firebase — boot straight into the app using localStorage
+  // (init() is called via DOMContentLoaded below; startApp is called inside init)
+} else {
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      currentUser = user;
+      showLoading(true);
+      showLogin(false);
+      await loadAllData();
+      renderUserMenu(user);
+      renderAll();
+      showLoading(false);
+      showToast(`👋 Welcome back, ${user.displayName?.split(' ')[0] || 'there'}!`);
+    } else {
+      currentUser = null;
+      data        = {};
+      showLoading(false);
+      showLogin(true);
+      renderUserMenu(null);
+    }
+  });
+}
 
 /* ── INIT ───────────────────────────────────────────────── */
 function init() {
@@ -605,13 +633,17 @@ function init() {
   document.getElementById('clearAllBtn').addEventListener('click', () => {
     showConfirm(
       'Clear all data?',
-      'This will permanently delete all your habit data from the cloud. This cannot be undone.',
+      'This will permanently delete all your habit data. This cannot be undone.',
       async () => {
         if (!currentUser) return;
-        const snap = await db.collection('users').doc(currentUser.uid).collection('days').get();
-        const batch = db.batch();
-        snap.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
+        if (!FIREBASE_CONFIGURED) {
+          localStorage.removeItem('habitTracker_v1');
+        } else {
+          const snap = await db.collection('users').doc(currentUser.uid).collection('days').get();
+          const batch = db.batch();
+          snap.forEach(doc => batch.delete(doc.ref));
+          await batch.commit();
+        }
         data = {};
         renderAll();
         showToast('🗑️ All data cleared');
@@ -666,4 +698,7 @@ function init() {
   }, { passive: true });
 }
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', async () => {
+  init();
+  if (!FIREBASE_CONFIGURED) await startApp();
+});
