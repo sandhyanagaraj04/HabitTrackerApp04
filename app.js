@@ -1,19 +1,26 @@
 /* ═══════════════════════════════════════════════════════════
    HABIT TRACKER — APPLICATION LOGIC
+   Firebase Auth + Firestore multi-user version
    ═══════════════════════════════════════════════════════════ */
 
 'use strict';
 
 /* ── CONSTANTS ──────────────────────────────────────────── */
-const STORAGE_KEY = 'habitTracker_v1';
 const STEPS_GOAL  = 10000;
 const DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_NAMES = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
 
+/* ── FIREBASE INIT ──────────────────────────────────────── */
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
 /* ── STATE ──────────────────────────────────────────────── */
+let currentUser = null;
 let currentDate = todayStr();
-let data        = loadData();
+let data        = {};        // in-memory cache: { [dateStr]: dayObject }
+let saveTimer   = null;      // debounce handle for Firestore writes
 
 /* ── UTILITY — DATE ─────────────────────────────────────── */
 function todayStr() {
@@ -21,7 +28,6 @@ function todayStr() {
 }
 
 function dateObj(str) {
-  // Parse YYYY-MM-DD as local date
   const [y, m, d] = str.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
@@ -40,13 +46,13 @@ function formatDateFull(str) {
 function isToday(str) { return str === todayStr(); }
 
 function getWeekDates(str) {
-  const d = dateObj(str);
-  const day = d.getDay(); // 0=Sun
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+  const d   = dateObj(str);
+  const day = d.getDay();
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
   return Array.from({ length: 7 }, (_, i) => {
-    const t = new Date(monday);
-    t.setDate(monday.getDate() + i);
+    const t = new Date(mon);
+    t.setDate(mon.getDate() + i);
     return t.toISOString().slice(0, 10);
   });
 }
@@ -63,26 +69,11 @@ function calcHours(fromTime, toTime) {
   const to   = timeToMinutes(toTime);
   if (from == null || to == null) return null;
   let diff = to - from;
-  if (diff < 0) diff += 1440; // crosses midnight
+  if (diff < 0) diff += 1440;
   return Math.round((diff / 60) * 10) / 10;
 }
 
-/* ── DATA STORAGE ───────────────────────────────────────── */
-function loadData() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-  } catch { return {}; }
-}
-
-function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-function getDayData(dateStr) {
-  if (!data[dateStr]) data[dateStr] = defaultDay();
-  return data[dateStr];
-}
-
+/* ── DEFAULT DAY ────────────────────────────────────────── */
 function defaultDay() {
   return {
     health: {
@@ -100,30 +91,57 @@ function defaultDay() {
   };
 }
 
+function getDayData(dateStr) {
+  if (!data[dateStr]) data[dateStr] = defaultDay();
+  return data[dateStr];
+}
+
+/* ── FIRESTORE SAVE (debounced) ─────────────────────────── */
+function saveData() {
+  if (!currentUser) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const dayData = data[currentDate] || defaultDay();
+    db.collection('users').doc(currentUser.uid)
+      .collection('days').doc(currentDate)
+      .set(dayData)
+      .catch(err => console.error('Firestore save error:', err));
+  }, 800);
+}
+
+/* ── FIRESTORE LOAD ─────────────────────────────────────── */
+async function loadAllData() {
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid)
+                         .collection('days').get();
+    data = {};
+    snap.forEach(doc => { data[doc.id] = doc.data(); });
+  } catch (err) {
+    console.error('Firestore load error:', err);
+    data = {};
+  }
+}
+
 /* ── COMPLETENESS ───────────────────────────────────────── */
 function healthCompletion(h) {
   const fields = [
     h.sleep_time, h.wake_time, h.sleep_quality > 0,
-    h.greyscale_on,
-    h.steps > 0, h.heart_points > 0,
+    h.greyscale_on, h.steps > 0, h.heart_points > 0,
     h.breakfast_source, h.lunch_source, h.dinner_source,
     h.breakfast, h.lunch, h.dinner
   ];
-  const filled = fields.filter(Boolean).length;
-  return Math.round((filled / fields.length) * 100);
+  return Math.round(fields.filter(Boolean).length / fields.length * 100);
 }
 
 function sadhanaCompletion(s) {
-  const fields = Object.values(s);
-  const done   = fields.filter(Boolean).length;
-  return Math.round((done / fields.length) * 100);
+  const vals = Object.values(s);
+  return Math.round(vals.filter(Boolean).length / vals.length * 100);
 }
 
 function dayHasData(dateStr) {
   if (!data[dateStr]) return false;
-  const d = data[dateStr];
-  const h = d.health || {};
-  const s = d.sadhana || {};
+  const h = data[dateStr].health  || {};
+  const s = data[dateStr].sadhana || {};
   return !!(h.sleep_time || h.wake_time || h.steps || Object.values(s).some(Boolean));
 }
 
@@ -131,20 +149,17 @@ function dayHasData(dateStr) {
 function calcStreak() {
   let streak = 0;
   let d = todayStr();
-  // Don't count today itself if it has no data
-  while (true) {
-    if (dayHasData(d)) { streak++; d = offsetDate(d, -1); }
-    else break;
-  }
+  while (dayHasData(d)) { streak++; d = offsetDate(d, -1); }
   return streak;
 }
 
 /* ── RENDER — HEADER ────────────────────────────────────── */
 function renderHeader() {
   const today = todayStr();
-  document.getElementById('dateLabel').textContent = isToday(currentDate) ? 'Today' :
-    currentDate === offsetDate(today, -1) ? 'Yesterday' :
-    currentDate === offsetDate(today, 1) ? 'Tomorrow' : '';
+  document.getElementById('dateLabel').textContent =
+    isToday(currentDate)                    ? 'Today'     :
+    currentDate === offsetDate(today, -1)   ? 'Yesterday' :
+    currentDate === offsetDate(today,  1)   ? 'Tomorrow'  : '';
   document.getElementById('dateFull').textContent = formatDateFull(currentDate);
   document.getElementById('nextDay').disabled = currentDate >= today;
   document.getElementById('streakDisplay').textContent = `🔥 ${calcStreak()}`;
@@ -158,12 +173,11 @@ function renderWeekStrip() {
   const today = todayStr();
 
   strip.innerHTML = week.map(d => {
-    const dt      = dateObj(d);
-    const cls     = [
-      'week-day',
-      d === today        ? 'today'    : '',
-      d === currentDate  ? 'selected' : '',
-      dayHasData(d)      ? 'has-data' : ''
+    const dt  = dateObj(d);
+    const cls = ['week-day',
+      d === today       ? 'today'    : '',
+      d === currentDate ? 'selected' : '',
+      dayHasData(d)     ? 'has-data' : ''
     ].filter(Boolean).join(' ');
 
     return `<div class="${cls}" data-date="${d}">
@@ -173,31 +187,31 @@ function renderWeekStrip() {
     </div>`;
   }).join('');
 
-  strip.querySelectorAll('.week-day').forEach(el => {
-    el.addEventListener('click', () => navigateTo(el.dataset.date));
-  });
+  strip.querySelectorAll('.week-day').forEach(el =>
+    el.addEventListener('click', () => navigateTo(el.dataset.date))
+  );
 }
 
-/* ── RENDER — TABS BADGES ───────────────────────────────── */
+/* ── RENDER — BADGES & RINGS ────────────────────────────── */
 function renderBadges() {
-  const d   = getDayData(currentDate);
+  const d    = getDayData(currentDate);
   const hPct = healthCompletion(d.health);
   const sPct = sadhanaCompletion(d.sadhana);
 
   document.getElementById('healthBadge').textContent  = `${hPct}%`;
   document.getElementById('sadhanaBadge').textContent = `${sPct}%`;
-  updateRing('sleepRing',   'sleepPct',   hPct);
-  updateRing('sadhanaRing', 'sadhanaPct', sPct);
-
-  // Tab badges
   document.getElementById('healthBadge').style.color  = hPct === 100 ? '#34d399' : '';
   document.getElementById('sadhanaBadge').style.color = sPct === 100 ? '#a78bfa' : '';
+  updateRing('sleepRing',   'sleepPct',   hPct);
+  updateRing('sadhanaRing', 'sadhanaPct', sPct);
 }
 
 function updateRing(ringId, pctId, pct) {
-  const circ = 2 * Math.PI * 15.9; // circumference
-  const fill  = (pct / 100) * circ;
-  document.getElementById(ringId).setAttribute('stroke-dasharray', `${fill.toFixed(1)} ${(circ - fill).toFixed(1)}`);
+  const circ = 2 * Math.PI * 15.9;
+  const fill = (pct / 100) * circ;
+  document.getElementById(ringId).setAttribute(
+    'stroke-dasharray', `${fill.toFixed(1)} ${(circ - fill).toFixed(1)}`
+  );
   document.getElementById(pctId).textContent = `${pct}%`;
 }
 
@@ -211,21 +225,15 @@ function renderHealth() {
   setVal('stepsInput',  h.steps);
   setVal('heartInput',  h.heart_points);
 
-  // Selects
   document.querySelectorAll('[data-field$="_source"]').forEach(el => {
     el.value = h[el.dataset.field] || '';
   });
-
-  // Text fields (meals)
   ['breakfast','lunch','snack','dinner'].forEach(m => {
     const el = document.querySelector(`[data-field="${m}"]`);
     if (el) el.value = h[m] || '';
   });
 
-  // Stars
   setStars(h.sleep_quality || 0);
-
-  // Computed fields
   updateComputed();
 }
 
@@ -235,9 +243,9 @@ function setVal(id, val) {
 }
 
 function setStars(val) {
-  document.querySelectorAll('#sleepQuality .star').forEach(s => {
-    s.classList.toggle('active', parseInt(s.dataset.val) <= val);
-  });
+  document.querySelectorAll('#sleepQuality .star').forEach(s =>
+    s.classList.toggle('active', parseInt(s.dataset.val) <= val)
+  );
 }
 
 /* ── RENDER — SADHANA FORM ──────────────────────────────── */
@@ -250,8 +258,8 @@ function renderSadhana() {
 }
 
 function updateSadhanaBanner() {
-  const s    = getDayData(currentDate).sadhana;
-  const all  = Object.values(s).every(Boolean);
+  const s   = getDayData(currentDate).sadhana;
+  const all = Object.values(s).every(Boolean);
   document.getElementById('sadhanaBanner').style.display = all ? 'block' : 'none';
 }
 
@@ -259,23 +267,20 @@ function updateSadhanaBanner() {
 function updateComputed() {
   const h = getDayData(currentDate).health;
 
-  // Sleep hours
-  const sh = calcHours(h.sleep_time, h.wake_time);
+  const sh  = calcHours(h.sleep_time, h.wake_time);
   const shEl = document.getElementById('sleepHours');
   shEl.querySelector('.computed-value').textContent = sh !== null ? sh : '—';
   shEl.querySelector('.computed-unit').textContent  = sh !== null ? 'hrs' : '';
 
-  // Greyscale hours (greyscale_on → wake_time)
-  const gh = calcHours(h.greyscale_on, h.wake_time);
+  const gh  = calcHours(h.greyscale_on, h.wake_time);
   const ghEl = document.getElementById('greyscaleHours');
   ghEl.querySelector('.computed-value').textContent = gh !== null ? gh : '—';
   ghEl.querySelector('.computed-unit').textContent  = gh !== null ? 'hrs' : '';
 
-  // Steps bar
-  const steps   = parseInt(h.steps) || 0;
-  const stepsPct = Math.min(100, Math.round((steps / STEPS_GOAL) * 100));
-  document.getElementById('stepsBar').style.width = stepsPct + '%';
-  document.getElementById('stepsGoalPct').textContent = stepsPct + '%';
+  const steps    = parseInt(h.steps) || 0;
+  const stepsPct = Math.min(100, Math.round(steps / STEPS_GOAL * 100));
+  document.getElementById('stepsBar').style.width         = stepsPct + '%';
+  document.getElementById('stepsGoalPct').textContent     = stepsPct + '%';
 }
 
 /* ── FULL RENDER ────────────────────────────────────────── */
@@ -295,80 +300,59 @@ function navigateTo(dateStr) {
 
 /* ── TAB SWITCHING ──────────────────────────────────────── */
 function switchTab(tabName) {
-  document.querySelectorAll('.tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.tab === tabName);
-  });
-  document.querySelectorAll('.tab-section').forEach(s => {
-    s.classList.toggle('active', s.id === `tab-${tabName}`);
-  });
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === tabName)
+  );
+  document.querySelectorAll('.tab-section').forEach(s =>
+    s.classList.toggle('active', s.id === `tab-${tabName}`)
+  );
 }
 
 /* ── EVENT HANDLERS — HEALTH ────────────────────────────── */
 function initHealthEvents() {
-  // Time inputs
-  ['sleepTime', 'wakeTime', 'greyscaleOn'].forEach(id => {
+  ['sleepTime','wakeTime','greyscaleOn'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('change', () => {
       getDayData(currentDate).health[el.dataset.field] = el.value;
-      saveData();
-      updateComputed();
-      renderBadges();
-      renderWeekStrip();
+      saveData(); updateComputed(); renderBadges(); renderWeekStrip();
     });
   });
 
-  // Steps / Heart points inputs
-  ['stepsInput', 'heartInput'].forEach(id => {
+  ['stepsInput','heartInput'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('input', () => {
       getDayData(currentDate).health[el.dataset.field] = el.value ? parseInt(el.value) : '';
-      saveData();
-      updateComputed();
-      renderBadges();
-      renderWeekStrip();
+      saveData(); updateComputed(); renderBadges(); renderWeekStrip();
     });
   });
 
-  // +/- buttons
   document.querySelectorAll('.num-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const target = document.getElementById(btn.dataset.target);
       if (!target) return;
-      const delta = parseInt(btn.dataset.delta);
-      const cur   = parseInt(target.value) || 0;
-      const val   = Math.max(0, cur + delta);
+      const val = Math.max(0, (parseInt(target.value) || 0) + parseInt(btn.dataset.delta));
       target.value = val;
       getDayData(currentDate).health[target.dataset.field] = val;
-      saveData();
-      updateComputed();
-      renderBadges();
-      renderWeekStrip();
+      saveData(); updateComputed(); renderBadges(); renderWeekStrip();
     });
   });
 
-  // Select / text fields
   document.querySelectorAll('.card-health [data-field]').forEach(el => {
     if (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && el.type === 'text')) {
       el.addEventListener('change', () => {
         getDayData(currentDate).health[el.dataset.field] = el.value;
-        saveData();
-        renderBadges();
-        renderWeekStrip();
+        saveData(); renderBadges(); renderWeekStrip();
       });
     }
   });
 
-  // Stars
   document.querySelectorAll('#sleepQuality .star').forEach(star => {
     star.addEventListener('click', () => {
       const val = parseInt(star.dataset.val);
       getDayData(currentDate).health.sleep_quality = val;
-      saveData();
-      setStars(val);
-      renderBadges();
-      renderWeekStrip();
+      saveData(); setStars(val); renderBadges(); renderWeekStrip();
     });
   });
 }
@@ -378,10 +362,7 @@ function initSadhanaEvents() {
   document.querySelectorAll('.sadhana-check').forEach(el => {
     el.addEventListener('change', () => {
       getDayData(currentDate).sadhana[el.dataset.field] = el.checked;
-      saveData();
-      updateSadhanaBanner();
-      renderBadges();
-      renderWeekStrip();
+      saveData(); updateSadhanaBanner(); renderBadges(); renderWeekStrip();
     });
   });
 }
@@ -405,37 +386,27 @@ function buildHealthRow(dateStr, h) {
   const sh = calcHours(h.sleep_time, h.wake_time);
   const gh = calcHours(h.greyscale_on, h.wake_time);
   return {
-    'Date':                dateStr,
-    'Day':                 DAY_NAMES[dateObj(dateStr).getDay()],
-    'Sleeping Time':       h.sleep_time || '',
-    'Waking Time':         h.wake_time  || '',
-    'Hours of Sleep':      sh != null ? sh : '',
-    'Sleep Quality (1-5)': h.sleep_quality || '',
-    'Greyscale On At':     h.greyscale_on  || '',
-    'Greyscale Hours':     gh != null ? gh : '',
-    'Steps':               h.steps         || '',
-    'Heart Points':        h.heart_points  || '',
-    'Breakfast Source':    h.breakfast_source || '',
-    'Breakfast':           h.breakfast        || '',
-    'Lunch Source':        h.lunch_source     || '',
-    'Lunch':               h.lunch            || '',
-    'Snack Source':        h.snack_source     || '',
-    'Snack':               h.snack            || '',
-    'Dinner Source':       h.dinner_source    || '',
-    'Dinner':              h.dinner           || ''
+    'Date': dateStr, 'Day': DAY_NAMES[dateObj(dateStr).getDay()],
+    'Sleeping Time': h.sleep_time || '', 'Waking Time': h.wake_time || '',
+    'Hours of Sleep': sh ?? '', 'Sleep Quality (1-5)': h.sleep_quality || '',
+    'Greyscale On At': h.greyscale_on || '', 'Greyscale Hours': gh ?? '',
+    'Steps': h.steps || '', 'Heart Points': h.heart_points || '',
+    'Breakfast Source': h.breakfast_source || '', 'Breakfast': h.breakfast || '',
+    'Lunch Source': h.lunch_source || '',     'Lunch': h.lunch || '',
+    'Snack Source': h.snack_source || '',     'Snack': h.snack || '',
+    'Dinner Source': h.dinner_source || '',   'Dinner': h.dinner || ''
   };
 }
 
 function buildSadhanaRow(dateStr, s) {
   return {
-    'Date':          dateStr,
-    'Day':           DAY_NAMES[dateObj(dateStr).getDay()],
-    'Guru Pooja':    s.guru_pooja    ? 'Yes' : 'No',
-    'Upa Yoga':      s.upa_yoga      ? 'Yes' : 'No',
-    'Surya Kriya':   s.surya_kriya   ? 'Yes' : 'No',
+    'Date': dateStr, 'Day': DAY_NAMES[dateObj(dateStr).getDay()],
+    'Guru Pooja': s.guru_pooja    ? 'Yes' : 'No',
+    'Upa Yoga':   s.upa_yoga      ? 'Yes' : 'No',
+    'Surya Kriya': s.surya_kriya  ? 'Yes' : 'No',
     'Yoga Namaskar': s.yoga_namaskar ? 'Yes' : 'No',
-    'SCK':           s.sck           ? 'Yes' : 'No',
-    'Total Done':    Object.values(s).filter(Boolean).length
+    'SCK': s.sck                  ? 'Yes' : 'No',
+    'Total Done': Object.values(s).filter(Boolean).length
   };
 }
 
@@ -443,25 +414,20 @@ function updateExportSummary() {
   const keys  = Object.keys(data).sort();
   const count = keys.length;
   const el    = document.getElementById('dataSummary');
-  if (count === 0) { el.textContent = 'No data recorded yet.'; return; }
-  el.textContent = `${count} day${count > 1 ? 's' : ''} of data recorded · ${keys[0]} → ${keys[keys.length - 1]}`;
+  if (!el) return;
+  el.textContent = count === 0
+    ? 'No data recorded yet.'
+    : `${count} day${count > 1 ? 's' : ''} of data · ${keys[0]} → ${keys[keys.length - 1]}`;
 }
 
 function doExport(format) {
   const dates = getExportRange();
-  if (!dates || dates.length === 0) {
-    showToast('⚠️ Please select a valid date range');
-    return;
-  }
+  if (!dates?.length) { showToast('⚠️ Please select a valid date range'); return; }
   const cats = getSelectedCats();
-  if (cats.length === 0) {
-    showToast('⚠️ Please select at least one category');
-    return;
-  }
+  if (!cats.length)   { showToast('⚠️ Please select at least one category'); return; }
 
-  const healthRows   = [];
-  const sadhanaRows  = [];
-
+  const healthRows  = [];
+  const sadhanaRows = [];
   dates.forEach(d => {
     const day = data[d] || defaultDay();
     if (cats.includes('health'))  healthRows.push(buildHealthRow(d, day.health || {}));
@@ -484,60 +450,40 @@ function rowsToCSV(rows) {
 function downloadFile(content, filename, mime) {
   const blob = new Blob([content], { type: mime });
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = filename;
+  const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
   document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
 function exportCSV(healthRows, sadhanaRows, cats) {
   const parts = [];
-  if (cats.includes('health') && healthRows.length) {
-    parts.push('=== HEALTH ===\n' + rowsToCSV(healthRows));
-  }
-  if (cats.includes('sadhana') && sadhanaRows.length) {
-    parts.push('=== SADHANA ===\n' + rowsToCSV(sadhanaRows));
-  }
-  const content  = parts.join('\n\n');
-  const filename = `habit-tracker-${todayStr()}.csv`;
-  downloadFile('\uFEFF' + content, filename, 'text/csv;charset=utf-8');
+  if (cats.includes('health')  && healthRows.length)  parts.push('=== HEALTH ===\n'  + rowsToCSV(healthRows));
+  if (cats.includes('sadhana') && sadhanaRows.length) parts.push('=== SADHANA ===\n' + rowsToCSV(sadhanaRows));
+  downloadFile('\uFEFF' + parts.join('\n\n'), `habit-tracker-${todayStr()}.csv`, 'text/csv;charset=utf-8');
   showToast('✅ CSV exported!');
 }
 
 function exportXLSX(healthRows, sadhanaRows, cats) {
-  if (typeof XLSX === 'undefined') {
-    showToast('⚠️ Excel library not loaded. Try CSV instead.');
-    return;
-  }
+  if (typeof XLSX === 'undefined') { showToast('⚠️ Excel library not loaded. Try CSV.'); return; }
   const wb = XLSX.utils.book_new();
-  if (cats.includes('health') && healthRows.length) {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(healthRows), 'Health');
-  }
-  if (cats.includes('sadhana') && sadhanaRows.length) {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sadhanaRows), 'Sadhana');
-  }
+  if (cats.includes('health')  && healthRows.length)  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(healthRows),  'Health');
+  if (cats.includes('sadhana') && sadhanaRows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sadhanaRows), 'Sadhana');
   if (!wb.SheetNames.length) { showToast('⚠️ No data to export'); return; }
   XLSX.writeFile(wb, `habit-tracker-${todayStr()}.xlsx`);
   showToast('✅ Excel file exported!');
 }
 
-/* ── QUICK DATE RANGES ──────────────────────────────────── */
 function setQuickRange(days) {
-  const to = todayStr();
-  let from;
-  if (days === 'all') {
-    const keys = Object.keys(data).sort();
-    from = keys.length ? keys[0] : to;
-  } else {
-    from = offsetDate(to, -(parseInt(days) - 1));
-  }
+  const to   = todayStr();
+  const keys = Object.keys(data).sort();
+  const from = days === 'all'
+    ? (keys.length ? keys[0] : to)
+    : offsetDate(to, -(parseInt(days) - 1));
   document.getElementById('exportFrom').value = from;
   document.getElementById('exportTo').value   = to;
-
-  document.querySelectorAll('.range-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.range === String(days));
-  });
+  document.querySelectorAll('.range-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.range === String(days))
+  );
 }
 
 /* ── TOAST ──────────────────────────────────────────────── */
@@ -555,92 +501,169 @@ function showConfirm(title, body, onOk) {
   document.getElementById('confirmTitle').textContent = title;
   document.getElementById('confirmBody').textContent  = body;
   document.getElementById('confirmModal').style.display = 'flex';
-  document.getElementById('confirmOk').onclick = () => {
-    hideConfirm(); onOk();
-  };
+  document.getElementById('confirmOk').onclick = () => { hideConfirm(); onOk(); };
 }
 function hideConfirm() {
   document.getElementById('confirmModal').style.display = 'none';
 }
 
+/* ── LOADING / LOGIN OVERLAYS ───────────────────────────── */
+function showLoading(visible) {
+  document.getElementById('loadingOverlay').style.display = visible ? 'flex' : 'none';
+}
+
+function showLogin(visible) {
+  document.getElementById('loginOverlay').style.display = visible ? 'flex' : 'none';
+}
+
+/* ── AUTH — USER MENU ───────────────────────────────────── */
+function renderUserMenu(user) {
+  const menu  = document.getElementById('userMenu');
+  const photo = document.getElementById('userPhoto');
+  const name  = document.getElementById('userName');
+  const email = document.getElementById('userEmail');
+
+  if (user) {
+    menu.style.display  = 'flex';
+    photo.src           = user.photoURL || '';
+    photo.alt           = user.displayName || 'User';
+    photo.title         = user.displayName || '';
+    name.textContent    = user.displayName || 'User';
+    email.textContent   = user.email || '';
+  } else {
+    menu.style.display  = 'none';
+  }
+}
+
+/* ── AUTH — GOOGLE SIGN-IN ──────────────────────────────── */
+function signInWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => {
+    console.error('Sign-in error:', err);
+    showToast('⚠️ Sign-in failed. Please try again.');
+  });
+}
+
+function signOut() {
+  auth.signOut().catch(err => console.error('Sign-out error:', err));
+}
+
+/* ── AUTH STATE LISTENER ────────────────────────────────── */
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    currentUser = user;
+    showLoading(true);
+    showLogin(false);
+
+    await loadAllData();
+
+    renderUserMenu(user);
+    renderAll();
+    showLoading(false);
+    showToast(`👋 Welcome back, ${user.displayName?.split(' ')[0] || 'there'}!`);
+  } else {
+    currentUser = null;
+    data        = {};
+    showLoading(false);
+    showLogin(true);
+    renderUserMenu(null);
+  }
+});
+
 /* ── INIT ───────────────────────────────────────────────── */
 function init() {
-  // Tab switching
+  /* Tab switching */
   document.getElementById('categoryTabs').addEventListener('click', e => {
     const tab = e.target.closest('[data-tab]');
     if (tab) switchTab(tab.dataset.tab);
   });
 
-  // Date navigation
-  document.getElementById('prevDay').addEventListener('click', () => {
-    navigateTo(offsetDate(currentDate, -1));
-  });
+  /* Date navigation */
+  document.getElementById('prevDay').addEventListener('click', () =>
+    navigateTo(offsetDate(currentDate, -1))
+  );
   document.getElementById('nextDay').addEventListener('click', () => {
     if (currentDate < todayStr()) navigateTo(offsetDate(currentDate, 1));
   });
 
-  // Header export button -> switch to export tab
+  /* Export shortcut */
   document.getElementById('exportBtn').addEventListener('click', () => switchTab('export'));
 
-  // Health events
+  /* Health & Sadhana events */
   initHealthEvents();
-
-  // Sadhana events
   initSadhanaEvents();
 
-  // Export buttons
+  /* Export */
   document.getElementById('exportCSV').addEventListener('click',  () => doExport('csv'));
   document.getElementById('exportXLSX').addEventListener('click', () => doExport('xlsx'));
-
-  // Quick ranges
-  document.querySelectorAll('.range-btn').forEach(btn => {
-    btn.addEventListener('click', () => setQuickRange(btn.dataset.range));
-  });
-
-  // Default export range
+  document.querySelectorAll('.range-btn').forEach(btn =>
+    btn.addEventListener('click', () => setQuickRange(btn.dataset.range))
+  );
   setQuickRange(7);
 
-  // Clear all
+  /* Clear all */
   document.getElementById('clearAllBtn').addEventListener('click', () => {
     showConfirm(
       'Clear all data?',
-      'This will permanently delete all your habit data. This cannot be undone.',
-      () => {
+      'This will permanently delete all your habit data from the cloud. This cannot be undone.',
+      async () => {
+        if (!currentUser) return;
+        const snap = await db.collection('users').doc(currentUser.uid).collection('days').get();
+        const batch = db.batch();
+        snap.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
         data = {};
-        saveData();
         renderAll();
         showToast('🗑️ All data cleared');
       }
     );
   });
 
-  // Confirm modal cancel
+  /* Confirm modal */
   document.getElementById('confirmCancel').addEventListener('click', hideConfirm);
   document.getElementById('confirmModal').addEventListener('click', e => {
-    if (e.target === document.getElementById('confirmModal')) hideConfirm();
+    if (e.target.id === 'confirmModal') hideConfirm();
   });
 
-  // Keyboard navigation
+  /* Google sign-in */
+  document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
+
+  /* Sign-out */
+  document.getElementById('signOutBtn').addEventListener('click', () => {
+    showConfirm('Sign out?', 'Your data is safely saved in the cloud.', signOut);
+  });
+
+  /* User avatar toggles dropdown */
+  document.getElementById('userPhoto').addEventListener('click', () => {
+    const dd = document.getElementById('userDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  });
+
+  /* Close dropdown when clicking outside */
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#userMenu')) {
+      const dd = document.getElementById('userDropdown');
+      if (dd) dd.style.display = 'none';
+    }
+  });
+
+  /* Keyboard navigation */
   document.addEventListener('keydown', e => {
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || !currentUser) return;
     if (e.key === 'ArrowLeft')  navigateTo(offsetDate(currentDate, -1));
     if (e.key === 'ArrowRight' && currentDate < todayStr()) navigateTo(offsetDate(currentDate, 1));
   });
 
-  // Touch swipe on main content
+  /* Touch swipe */
   let touchStartX = 0;
   const mc = document.querySelector('.main-content');
   mc.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-  mc.addEventListener('touchend', e => {
+  mc.addEventListener('touchend',   e => {
     const dx = e.changedTouches[0].clientX - touchStartX;
-    if (Math.abs(dx) > 60) {
-      if (dx > 0) navigateTo(offsetDate(currentDate, -1));
-      else if (currentDate < todayStr()) navigateTo(offsetDate(currentDate, 1));
-    }
+    if (!currentUser || Math.abs(dx) < 60) return;
+    if (dx > 0) navigateTo(offsetDate(currentDate, -1));
+    else if (currentDate < todayStr()) navigateTo(offsetDate(currentDate, 1));
   }, { passive: true });
-
-  // Initial render
-  renderAll();
 }
 
 document.addEventListener('DOMContentLoaded', init);
