@@ -514,9 +514,10 @@ function showToast(msg) {
 }
 
 /* ── CONFIRM MODAL ──────────────────────────────────────── */
-function showConfirm(title, body, onOk) {
+function showConfirm(title, body, onOk, okLabel = 'Confirm') {
   document.getElementById('confirmTitle').textContent = title;
   document.getElementById('confirmBody').textContent  = body;
+  document.getElementById('confirmOk').textContent    = okLabel;
   document.getElementById('confirmModal').style.display = 'flex';
   document.getElementById('confirmOk').onclick = () => { hideConfirm(); onOk(); };
 }
@@ -655,7 +656,8 @@ function init() {
         data = {};
         renderAll();
         showToast('🗑️ All data cleared');
-      }
+      },
+      'Clear all'
     );
   });
 
@@ -670,7 +672,7 @@ function init() {
 
   /* Sign-out */
   document.getElementById('signOutBtn').addEventListener('click', () => {
-    showConfirm('Sign out?', 'Your data is safely saved in the cloud.', signOut);
+    showConfirm('Sign out?', 'Your data is safely saved in the cloud.', signOut, 'Sign out');
   });
 
   /* User avatar toggles dropdown */
