@@ -36,8 +36,11 @@ let mealOptions = {
   snack:     ['Fruits', 'Nuts & Seeds', 'Tea & Biscuits', 'Yogurt', 'Protein Bar'],
   dinner:    ['Chapati & Sabzi', 'Rice & Curry', 'Khichdi', 'Dal & Rice', 'Soup & Salad']
 };
-let mealPlanWeekStart   = null;
-let pendingAddMealType  = null;
+let mealPlanWeekStart  = null;
+let pendingAddMealType = null;
+
+let userSections    = [];    // [{ id, name, icon, type, order, visible }]
+let activeRecognition = null; // Web Speech API instance
 
 /* ── UTILITY — DATE ─────────────────────────────────────── */
 function todayStr() {
@@ -105,7 +108,9 @@ function defaultDay() {
       surya_kriya: false, yoga_namaskar: false, sck: false
     },
     t: {},
-    plan: { breakfast: '', lunch: '', snack: '', dinner: '' }
+    plan: { breakfast: '', lunch: '', snack: '', dinner: '' },
+    reading: { did_read: false, book_title: '', author: '', pages_read: 0, duration_mins: 0, notes: '' },
+    tracker: {}
   };
 }
 
@@ -200,11 +205,17 @@ function sadhanaCompletion(s) {
   return Math.round(vals.filter(Boolean).length / vals.length * 100);
 }
 
+function readingCompletion(r) {
+  const fields = [r.did_read, r.book_title, (r.pages_read || 0) > 0 || (r.duration_mins || 0) > 0];
+  return Math.round(fields.filter(Boolean).length / fields.length * 100);
+}
+
 function dayHasData(dateStr) {
   if (!data[dateStr]) return false;
   const h = data[dateStr].health  || {};
   const s = data[dateStr].sadhana || {};
-  return !!(h.sleep_time || h.wake_time || h.steps || Object.values(s).some(Boolean));
+  const r = data[dateStr].reading || {};
+  return !!(h.sleep_time || h.wake_time || h.steps || Object.values(s).some(Boolean) || r.did_read);
 }
 
 /* ── STREAK ─────────────────────────────────────────────── */
@@ -259,13 +270,17 @@ function renderBadges() {
   const d    = getDayData(currentDate);
   const hPct = healthCompletion(d.health);
   const sPct = sadhanaCompletion(d.sadhana);
+  const rPct = readingCompletion(d.reading || {});
 
   document.getElementById('healthBadge').textContent  = `${hPct}%`;
   document.getElementById('sadhanaBadge').textContent = `${sPct}%`;
+  document.getElementById('readingBadge').textContent = `${rPct}%`;
   document.getElementById('healthBadge').style.color  = hPct === 100 ? '#34d399' : '';
   document.getElementById('sadhanaBadge').style.color = sPct === 100 ? '#a78bfa' : '';
-  updateRing('sleepRing',   'sleepPct',   hPct);
-  updateRing('sadhanaRing', 'sadhanaPct', sPct);
+  document.getElementById('readingBadge').style.color = rPct === 100 ? '#f472b6' : '';
+  updateRing('sleepRing',    'sleepPct',   hPct);
+  updateRing('sadhanaRing',  'sadhanaPct', sPct);
+  updateRing('readingRing',  'readingPct', rPct);
 }
 
 function updateRing(ringId, pctId, pct) {
@@ -323,6 +338,19 @@ function updateSadhanaBanner() {
   const s   = getDayData(currentDate).sadhana;
   const all = Object.values(s).every(Boolean);
   document.getElementById('sadhanaBanner').style.display = all ? 'block' : 'none';
+}
+
+/* ── RENDER — READING FORM ──────────────────────────────── */
+function renderReading() {
+  const r = getDayData(currentDate).reading || {};
+  const didRead = document.getElementById('didRead');
+  if (didRead) didRead.checked = !!r.did_read;
+  setVal('readingTitle',    r.book_title);
+  setVal('readingAuthor',   r.author);
+  setVal('readingPages',    r.pages_read  || '');
+  setVal('readingDuration', r.duration_mins || '');
+  const notes = document.getElementById('readingNotes');
+  if (notes) notes.value = r.notes || '';
 }
 
 /* ── COMPUTED FIELDS ────────────────────────────────────── */
@@ -405,6 +433,13 @@ function renderPlanner() {
   });
   const pss = document.getElementById('pstreak-sadhana');
   if (pss) pss.textContent = sadhanaSectionStreak > 0 ? `🔥 ${sadhanaSectionStreak}` : '';
+
+  // Reading
+  const readingCheck = d => !!(data[d]?.reading?.did_read);
+  setHabitCard('reading', calcHabitStreak(readingCheck), getLast7Dots(readingCheck));
+  const readingSectionStreak = calcHabitStreak(readingCheck);
+  const psr = document.getElementById('pstreak-reading');
+  if (psr) psr.textContent = readingSectionStreak > 0 ? `🔥 ${readingSectionStreak}` : '';
 }
 
 /* ── MEAL PLANNER RENDER ────────────────────────────────── */
@@ -509,15 +544,353 @@ function confirmAddOption() {
   showToast(`✅ Added "${val}" to ${mealType} options`);
 }
 
+/* ── DAILY TRACKER RENDER ───────────────────────────────── */
+function renderDailyTracker() {
+  const label = document.getElementById('trackerDateLabel');
+  if (label) label.textContent = formatDateFull(currentDate);
+
+  renderPendingHabits();
+
+  const container = document.getElementById('trackerSlots');
+  if (!container) return;
+
+  const now    = new Date();
+  const nowKey = isToday(currentDate)
+    ? `${String(now.getHours()).padStart(2,'0')}${String(Math.floor(now.getMinutes()/15)*15).padStart(2,'0')}`
+    : null;
+
+  const tracker = getDayData(currentDate).tracker || {};
+  const slots   = [];
+  for (let h = 5; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const key  = `${String(h).padStart(2,'0')}${String(m).padStart(2,'0')}`;
+      const disp = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      slots.push({ key, disp });
+    }
+  }
+
+  container.innerHTML = slots.map(({ key, disp }) => {
+    const isCurrent = key === nowKey;
+    const val = tracker[key] || '';
+    return `<div class="tracker-slot${isCurrent ? ' current-slot' : ''}" data-key="${key}">
+      <span class="slot-time">${disp}</span>
+      <textarea class="slot-input${val ? ' has-content' : ''}" rows="1"
+        data-slot="${key}" placeholder="${isCurrent ? 'What are you doing now?' : ''}"
+        >${val}</textarea>
+      <button class="slot-mic-btn" data-slot="${key}" title="Speak to fill">🎤</button>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.slot-input').forEach(ta => {
+    autoResizeTextarea(ta);
+    ta.addEventListener('input', () => {
+      autoResizeTextarea(ta);
+      saveTrackerSlot(ta.dataset.slot, ta.value);
+    });
+    ta.addEventListener('blur', () => {
+      if (ta.value.trim()) parseTrackerEntry(ta.value, currentDate);
+    });
+  });
+
+  container.querySelectorAll('.slot-mic-btn').forEach(btn => {
+    btn.addEventListener('click', () => startSpeechInput(btn.dataset.slot));
+  });
+
+  if (nowKey && isToday(currentDate)) {
+    const cur = container.querySelector('.current-slot');
+    if (cur) setTimeout(() => cur.scrollIntoView({ behavior:'smooth', block:'center' }), 100);
+  }
+}
+
+function autoResizeTextarea(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = Math.max(36, ta.scrollHeight) + 'px';
+}
+
+function saveTrackerSlot(slotKey, value) {
+  if (!data[currentDate]) data[currentDate] = defaultDay();
+  if (!data[currentDate].tracker) data[currentDate].tracker = {};
+  if (value.trim()) data[currentDate].tracker[slotKey] = value;
+  else delete data[currentDate].tracker[slotKey];
+  saveData();
+}
+
+function parseTrackerEntry(text, date) {
+  const lower = text.toLowerCase();
+  const d = getDayData(date);
+  let changed = false;
+
+  // Sadhana practices (keyword match)
+  const SADHANA_MAP = {
+    surya_kriya:    /surya kriya|surya-kriya/,
+    guru_pooja:     /guru pooja|guru-pooja/,
+    upa_yoga:       /upa yoga|upa-yoga/,
+    yoga_namaskar:  /yoga namaskar|yoga-namaskar/,
+    sck:            /\bsck\b|shakti chalana/
+  };
+  Object.entries(SADHANA_MAP).forEach(([k, rx]) => {
+    if (rx.test(lower) && !d.sadhana[k]) { d.sadhana[k] = true; changed = true; }
+  });
+
+  // Steps
+  const stepsM = lower.match(/(\d[\d,]*)\s*steps/);
+  if (stepsM) { d.health.steps = parseInt(stepsM[1].replace(/,/g,'')); changed = true; }
+
+  // Heart points
+  const hpM = lower.match(/(\d+)\s*heart/);
+  if (hpM) { d.health.heart_points = parseInt(hpM[1]); changed = true; }
+
+  // Reading
+  if (/\bread\b|reading|book|pages/.test(lower)) {
+    d.reading.did_read = true; changed = true;
+  }
+  const pagesM = lower.match(/(\d+)\s*pages?/);
+  if (pagesM) { d.reading.pages_read = parseInt(pagesM[1]); changed = true; }
+  const durM = lower.match(/(\d+)\s*min(?:utes?)?\s*(?:of\s+)?read|read\s+for\s+(\d+)/);
+  if (durM) { d.reading.duration_mins = parseInt(durM[1] || durM[2]); changed = true; }
+
+  // Breakfast / lunch / snack / dinner
+  const mealRx = { breakfast: /breakfast[:\s]+(.+)/, lunch: /lunch[:\s]+(.+)/, snack: /snack[:\s]+(.+)/, dinner: /dinner[:\s]+(.+)/ };
+  Object.entries(mealRx).forEach(([meal, rx]) => {
+    const m = lower.match(rx);
+    if (m && !d.health[meal]) { d.health[meal] = m[1].trim(); changed = true; }
+  });
+
+  if (changed) {
+    saveData(); renderAll();
+    showToast('✨ Habits auto-populated from tracker');
+  }
+}
+
+/* ── PENDING HABITS PANEL ───────────────────────────────── */
+function renderPendingHabits() {
+  const panel = document.getElementById('pendingPanel');
+  const chips = document.getElementById('pendingChips');
+  if (!panel || !chips) return;
+
+  const d     = getDayData(currentDate);
+  const h     = d.health  || {};
+  const s     = d.sadhana || {};
+  const r     = d.reading || {};
+  const items = [];
+
+  if (!h.sleep_time) items.push({ label: '😴 Sleep', tab: 'health' });
+  if (!(parseInt(h.steps) > 0)) items.push({ label: '🏃 Steps', tab: 'health' });
+  if (!h.breakfast) items.push({ label: '🌅 Breakfast', tab: 'health' });
+  if (!h.lunch)     items.push({ label: '☀️ Lunch', tab: 'health' });
+  if (!h.dinner)    items.push({ label: '🌙 Dinner', tab: 'health' });
+  if (!s.guru_pooja)    items.push({ label: '🪔 Guru Pooja', tab: 'sadhana' });
+  if (!s.surya_kriya)   items.push({ label: '☀️ Surya Kriya', tab: 'sadhana' });
+  if (!s.yoga_namaskar) items.push({ label: '🧘 Yoga Namaskar', tab: 'sadhana' });
+  if (!s.upa_yoga)      items.push({ label: '🌀 Upa Yoga', tab: 'sadhana' });
+  if (!s.sck)           items.push({ label: '⚡ SCK', tab: 'sadhana' });
+  if (!r.did_read) items.push({ label: '📚 Reading', tab: 'reading' });
+
+  if (!items.length) {
+    panel.classList.add('empty');
+    return;
+  }
+  panel.classList.remove('empty');
+  chips.innerHTML = items.map(it =>
+    `<span class="pending-chip" data-tab="${it.tab}">${it.label}</span>`
+  ).join('');
+  chips.querySelectorAll('.pending-chip').forEach(c =>
+    c.addEventListener('click', () => switchTab(c.dataset.tab))
+  );
+}
+
+/* ── SPEECH-TO-TEXT ─────────────────────────────────────── */
+function startSpeechInput(slotKey) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('⚠️ Speech recognition not supported in this browser'); return; }
+
+  if (activeRecognition) { activeRecognition.stop(); activeRecognition = null; return; }
+
+  const btn = document.querySelector(`.slot-mic-btn[data-slot="${slotKey}"]`);
+  const ta  = document.querySelector(`.slot-input[data-slot="${slotKey}"]`);
+
+  const recognition = new SpeechRecognition();
+  recognition.lang             = 'en-US';
+  recognition.interimResults   = false;
+  recognition.maxAlternatives  = 1;
+  activeRecognition = recognition;
+
+  if (btn) btn.classList.add('recording');
+
+  recognition.onresult = e => {
+    const transcript = e.results[0][0].transcript;
+    if (ta) {
+      ta.value = (ta.value ? ta.value + ' ' : '') + transcript;
+      ta.classList.add('has-content');
+      autoResizeTextarea(ta);
+      saveTrackerSlot(slotKey, ta.value);
+      parseTrackerEntry(ta.value, currentDate);
+    }
+  };
+
+  recognition.onerror  = () => { if (btn) btn.classList.remove('recording'); activeRecognition = null; };
+  recognition.onend    = () => { if (btn) btn.classList.remove('recording'); activeRecognition = null; };
+  recognition.start();
+}
+
+/* ── USER SECTIONS (Firestore per-user) ─────────────────── */
+const DEFAULT_SECTIONS = [
+  { id: 'health',  name: 'Health',         icon: '💚', type: 'builtin', order: 0, visible: true },
+  { id: 'sadhana', name: 'Sadhana',        icon: '🔮', type: 'builtin', order: 1, visible: true },
+  { id: 'reading', name: 'Reading Habits', icon: '📚', type: 'builtin', order: 2, visible: true }
+];
+
+async function loadUserSections() {
+  if (!FIREBASE_CONFIGURED) {
+    try {
+      const stored = JSON.parse(localStorage.getItem('habitTracker_sections') || 'null');
+      userSections = stored || [...DEFAULT_SECTIONS];
+    } catch { userSections = [...DEFAULT_SECTIONS]; }
+    return;
+  }
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('sections').get();
+    if (snap.empty) {
+      userSections = [...DEFAULT_SECTIONS];
+      await seedDefaultSections();
+    } else {
+      userSections = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => a.order - b.order);
+    }
+  } catch { userSections = [...DEFAULT_SECTIONS]; }
+}
+
+async function seedDefaultSections() {
+  if (!FIREBASE_CONFIGURED) {
+    localStorage.setItem('habitTracker_sections', JSON.stringify(userSections));
+    return;
+  }
+  const batch = db.batch();
+  DEFAULT_SECTIONS.forEach(s => {
+    batch.set(db.collection('users').doc(currentUser.uid).collection('sections').doc(s.id), s);
+  });
+  await batch.commit().catch(() => {});
+}
+
+async function saveSection(section) {
+  if (!FIREBASE_CONFIGURED) {
+    localStorage.setItem('habitTracker_sections', JSON.stringify(userSections));
+    return;
+  }
+  await db.collection('users').doc(currentUser.uid).collection('sections').doc(section.id)
+    .set(section).catch(() => {});
+}
+
+async function deleteSection(sectionId) {
+  userSections = userSections.filter(s => s.id !== sectionId);
+  if (!FIREBASE_CONFIGURED) {
+    localStorage.setItem('habitTracker_sections', JSON.stringify(userSections));
+    return;
+  }
+  await db.collection('users').doc(currentUser.uid).collection('sections').doc(sectionId)
+    .delete().catch(() => {});
+}
+
+/* ── ONBOARDING ─────────────────────────────────────────── */
+async function checkFirstLogin() {
+  if (!currentUser) return;
+  if (!FIREBASE_CONFIGURED) {
+    if (!localStorage.getItem('habitTracker_onboarded')) {
+      showOnboarding();
+      localStorage.setItem('habitTracker_onboarded', '1');
+    }
+    return;
+  }
+  const doc = await db.collection('users').doc(currentUser.uid).get().catch(() => null);
+  if (doc && !doc.data()?.onboarded) {
+    showOnboarding();
+    db.collection('users').doc(currentUser.uid).set({ onboarded: true }, { merge: true }).catch(() => {});
+  }
+}
+
+function showOnboarding() {
+  document.getElementById('onboardingModal').style.display = 'flex';
+}
+function hideOnboarding() {
+  document.getElementById('onboardingModal').style.display = 'none';
+}
+
+/* ── SECTIONS MANAGEMENT MODAL ──────────────────────────── */
+function renderSectionsList() {
+  const list = document.getElementById('sectionsList');
+  const count = document.getElementById('sectionsCount');
+  if (!list) return;
+
+  list.innerHTML = userSections.map(s => `
+    <div class="section-item" data-id="${s.id}">
+      <span class="section-item-icon">${s.icon}</span>
+      <span class="section-item-name">${s.name}</span>
+      <span class="section-item-type">${s.type}</span>
+      ${s.type === 'custom' ? `<button class="section-delete-btn" data-id="${s.id}">✕</button>` : ''}
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.section-delete-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await deleteSection(btn.dataset.id);
+      renderSectionsList();
+      renderCustomSections();
+      showToast('Section removed');
+    });
+  });
+
+  if (count) count.textContent = `${userSections.length} / 10 sections`;
+  const addForm = document.getElementById('addSectionForm');
+  if (addForm) addForm.style.display = userSections.length >= 10 ? 'none' : 'flex';
+}
+
+function renderCustomSections() {
+  const container = document.getElementById('customSectionsContainer');
+  if (!container) return;
+
+  const custom = userSections.filter(s => s.type === 'custom');
+  container.innerHTML = custom.map(s => `
+    <div class="planner-section" style="--ps-accent:#818cf8;--ps-soft:rgba(129,140,248,0.1)" id="ps-${s.id}">
+      <div class="ps-header" data-section="ps-${s.id}">
+        <div class="ps-left">
+          <span>${s.icon}</span>
+          <span class="ps-title" style="color:var(--planner)">${s.name}</span>
+        </div>
+        <div class="ps-right">
+          <svg class="ps-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="ps-body" id="psbody-${s.id}">
+        <div class="habit-card">
+          <span class="habit-icon">${s.icon}</span>
+          <div class="habit-info">
+            <div class="habit-name">${s.name}</div>
+            <div class="habit-dots" id="hdots-${s.id}"></div>
+          </div>
+          <div class="habit-streak-badge" id="hstreak-${s.id}">—</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.ps-header').forEach(hdr => {
+    hdr.addEventListener('click', () => {
+      const section = document.getElementById(hdr.dataset.section);
+      if (section) section.classList.toggle('collapsed');
+    });
+  });
+}
+
 /* ── FULL RENDER ────────────────────────────────────────── */
 function renderAll() {
   renderHeader();
   renderHealth();
   renderSadhana();
+  renderReading();
   renderBadges();
   updateExportSummary();
   renderPlanner();
   renderMealPlanner();
+  renderDailyTracker();
 }
 
 /* ── NAVIGATION ─────────────────────────────────────────── */
@@ -781,21 +1154,22 @@ function signOut() {
 async function startApp() {
   showLoading(true);
   await loadAllData();
+  await loadUserSections();
+  renderCustomSections();
   renderUserMenu(currentUser);
   renderAll();
   showLoading(false);
+  await checkFirstLogin();
 }
 
 if (!FIREBASE_CONFIGURED) {
   // No Firebase — boot straight into the app using localStorage
-  // (init() is called via DOMContentLoaded below; startApp is called inside init)
 } else {
   auth.onAuthStateChanged(async user => {
     if (user) {
       currentUser = user;
       showLoading(true);
       showLogin(false);
-      // Save/update user profile so admin dashboard can see all users
       db.collection('users').doc(user.uid).set({
         name:       user.displayName || '',
         email:      user.email || '',
@@ -804,13 +1178,17 @@ if (!FIREBASE_CONFIGURED) {
         createdAt:  firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true }).catch(() => {});
       await loadAllData();
+      await loadUserSections();
+      renderCustomSections();
       renderUserMenu(user);
       renderAll();
       showLoading(false);
       showToast(`👋 Welcome back, ${user.displayName?.split(' ')[0] || 'there'}!`);
+      await checkFirstLogin();
     } else {
       currentUser = null;
       data        = {};
+      userSections = [];
       showLoading(false);
       showLogin(true);
       renderUserMenu(null);
@@ -846,6 +1224,70 @@ function init() {
       mealPlanWeekStart = offsetDate(mealPlanWeekStart, 7);
       renderMealPlanner();
     }
+  });
+
+  /* Reading Habits events */
+  const didRead = document.getElementById('didRead');
+  if (didRead) {
+    didRead.addEventListener('change', () => {
+      getDayData(currentDate).reading.did_read = didRead.checked;
+      saveData(); renderBadges(); renderWeekStrip();
+    });
+  }
+  ['readingTitle','readingAuthor'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      getDayData(currentDate).reading[el.dataset.field] = el.value;
+      saveData(); renderBadges();
+    });
+  });
+  ['readingPages','readingDuration'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      getDayData(currentDate).reading[el.dataset.field] = parseInt(el.value) || 0;
+      saveData(); renderBadges();
+    });
+  });
+  const readingNotes = document.getElementById('readingNotes');
+  if (readingNotes) {
+    readingNotes.addEventListener('input', () => {
+      getDayData(currentDate).reading.notes = readingNotes.value;
+      saveData();
+    });
+  }
+
+  /* Reading ± buttons (reuse existing .num-btn logic, handled by existing handler) */
+
+  /* Onboarding */
+  document.getElementById('onboardingStart').addEventListener('click', hideOnboarding);
+
+  /* Sections modal */
+  document.getElementById('manageSectionsBtn').addEventListener('click', () => {
+    renderSectionsList();
+    document.getElementById('sectionsModal').style.display = 'flex';
+  });
+  document.getElementById('sectionsMgrClose').addEventListener('click', () => {
+    document.getElementById('sectionsModal').style.display = 'none';
+  });
+  document.getElementById('sectionsModal').addEventListener('click', e => {
+    if (e.target.id === 'sectionsModal') document.getElementById('sectionsModal').style.display = 'none';
+  });
+  document.getElementById('addSectionBtn').addEventListener('click', async () => {
+    const icon = document.getElementById('newSectionIcon').value.trim() || '📝';
+    const name = document.getElementById('newSectionName').value.trim();
+    if (!name) { showToast('⚠️ Enter a section name'); return; }
+    if (userSections.length >= 10) { showToast('⚠️ Maximum 10 sections reached'); return; }
+    const id = 'custom_' + Date.now();
+    const section = { id, name, icon, type: 'custom', order: userSections.length, visible: true };
+    userSections.push(section);
+    await saveSection(section);
+    document.getElementById('newSectionIcon').value = '';
+    document.getElementById('newSectionName').value = '';
+    renderSectionsList();
+    renderCustomSections();
+    showToast(`✅ "${name}" section added`);
   });
 
   /* Add meal option modal */
