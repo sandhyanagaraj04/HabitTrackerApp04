@@ -252,7 +252,7 @@ body {
   z-index: 190;
   backdrop-filter: blur(2px);
 }
-.sidebar-overlay.visible { display: block; }
+.sidebar-overlay.sidebar-open { display: block; }
 
 /* Hamburger button (mobile only, hidden on desktop) */
 .hamburger-btn {
@@ -2533,26 +2533,57 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .planner-manage-btn:hover { border-color: var(--border-h); color: var(--text); }
 
 /* ══════════════════════════════════════════════════════════
-   RESPONSIVE — MOBILE SIDEBAR
+   RESPONSIVE — MOBILE-FIRST
    ══════════════════════════════════════════════════════════ */
 
+/* ── Mobile (default, no media query needed for small screens) */
 @media (max-width: 768px) {
-  /* Sidebar narrower on mobile but visible by default */
-  :root { --sidebar-w: 200px; }
-  .app-sidebar { width: 200px; }
-  .main-content { padding: 14px 14px 40px; }
+  /* Sidebar is a drawer: hidden off-screen by default */
+  .app-sidebar {
+    width: 260px;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 40px rgba(0,0,0,0.65);
+  }
+  /* Drawer open state */
+  .app-sidebar.sidebar-open { transform: translateX(0); }
 
-  /* Hamburger shown — collapses the sidebar */
+  /* Header and content go full-width on mobile */
+  .app-header    { margin-left: 0 !important; }
+  .main-content  { margin-left: 0 !important; padding: 14px 14px 90px; max-width: 100%; }
+
+  /* Show hamburger on mobile */
   .hamburger-btn { display: flex; }
 
-  /* When hamburger collapses the sidebar */
-  .app-sidebar.collapsed { transform: translateX(-100%); }
+  /* Prevent iOS double-tap zoom on buttons */
+  button, label, .nav-item, .practice-item { touch-action: manipulation; }
+
+  /* Prevent iOS auto-zoom on focused inputs */
+  input[type="text"],
+  input[type="number"],
+  input[type="time"],
+  select,
+  textarea { font-size: 16px !important; }
+
+  /* Slightly larger touch targets for practice items */
+  .practice-item { padding: 16px 4px; min-height: 60px; }
+
+  /* Compact trend rows — label wraps on small screens */
+  .trend-habit-label { font-size: 11px; min-width: 90px; max-width: 110px; }
+
+  /* Date navigation bigger tap targets */
+  .date-arrow { width: 44px; height: 44px; }
+
+  /* Card body slightly less padding */
+  .card-body { padding: 14px 14px; }
+  .card-header { padding: 14px 14px 10px; }
 }
 
+/* ── Desktop: sidebar always visible ───────────────────── */
 @media (min-width: 769px) {
-  /* Hide hamburger on desktop; sidebar always visible */
   .hamburger-btn { display: none; }
-  .app-sidebar { transform: translateX(0) !important; }
+  .app-sidebar   { transform: translateX(0) !important; }
+  .sidebar-overlay { display: none !important; }
+  .main-content  { padding: 16px 24px 40px; }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2629,7 +2660,7 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 
 .trend-bars {
   display: flex;
-  gap: 2px;
+  gap: 1px;
   align-items: stretch;
   height: 20px;
   flex: 1;

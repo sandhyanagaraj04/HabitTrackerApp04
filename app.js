@@ -1621,7 +1621,7 @@ function renderTrendBars(containerId, checker, color) {
   if (!el) return;
   const today = todayStr();
   const bars = [];
-  for (let i = 29; i >= 0; i--) {
+  for (let i = 89; i >= 0; i--) {
     const d = offsetDate(today, -i);
     const done = checker(d);
     bars.push(`<div class="trend-bar${done ? ' done' : ''}" style="${done ? `background:${color}` : ''}" title="${d}"></div>`);
@@ -1689,31 +1689,18 @@ function switchTab(tabName) {
 }
 
 function toggleSidebar() {
-  const sidebar  = document.getElementById('appSidebar');
-  const overlay  = document.getElementById('sidebarOverlay');
-  const header   = document.querySelector('.app-header');
-  const main     = document.querySelector('.main-content');
-  const isHiding = !sidebar.classList.contains('collapsed');
-  sidebar.classList.toggle('collapsed', isHiding);
-  overlay.classList.toggle('visible',   isHiding);
-  if (isHiding) {
-    if (header) header.style.marginLeft = '0';
-    if (main)   main.style.marginLeft   = '0';
-  } else {
-    if (header) header.style.marginLeft = '';
-    if (main)   main.style.marginLeft   = '';
-  }
-}
-
-function openSidebar() {
   const sidebar = document.getElementById('appSidebar');
   const overlay = document.getElementById('sidebarOverlay');
-  const header  = document.querySelector('.app-header');
-  const main    = document.querySelector('.main-content');
-  sidebar.classList.remove('collapsed');
-  overlay.classList.remove('visible');
-  if (header) header.style.marginLeft = '';
-  if (main)   main.style.marginLeft   = '';
+  const isOpen  = sidebar.classList.contains('sidebar-open');
+  sidebar.classList.toggle('sidebar-open', !isOpen);
+  overlay.classList.toggle('sidebar-open', !isOpen);
+}
+
+function closeSidebar() {
+  const sidebar = document.getElementById('appSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  sidebar.classList.remove('sidebar-open');
+  overlay.classList.remove('sidebar-open');
 }
 
 function closeSidebar() {
@@ -2008,10 +1995,10 @@ if (!FIREBASE_CONFIGURED) {
 
 /* ── INIT ───────────────────────────────────────────────── */
 function init() {
-  /* Sidebar nav switching */
+  /* Sidebar nav switching — close drawer on mobile after tap */
   document.getElementById('sidebarNav').addEventListener('click', e => {
     const item = e.target.closest('[data-tab]');
-    if (item) switchTab(item.dataset.tab);
+    if (item) { switchTab(item.dataset.tab); closeSidebar(); }
   });
   /* Export in sidebar footer also triggers tab switch */
   document.querySelector('.sidebar-footer .nav-item[data-tab="export"]')
@@ -2019,7 +2006,7 @@ function init() {
 
   /* Hamburger — collapses sidebar on mobile; overlay restores it */
   document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
-  document.getElementById('sidebarOverlay').addEventListener('click', openSidebar);
+  document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
 
   /* Planner — collapsible sections */
   document.querySelectorAll('.ps-header').forEach(hdr => {

@@ -128,11 +128,11 @@
   <!-- ── HEALTH TAB ──────────────────────────────────── -->
   <section class="tab-section active" id="tab-health">
 
-    <!-- 3-Month Trends at top -->
+    <!-- 90-Day Trends at top -->
     <div class="trends-card card-health">
       <div class="trends-header">
-        <span class="trends-title">3-Month Trends</span>
-        <span class="trends-subtitle">last 30 days per habit</span>
+        <span class="trends-title">90-Day Trends</span>
+        <span class="trends-subtitle">last 90 days per habit</span>
       </div>
       <div class="heatmap-grid" id="heatmap-health"></div>
       <div class="trend-habits">
@@ -178,6 +178,16 @@
     <!-- ── SADHANA TAB ─────────────────────────────────── -->
   <section class="tab-section" id="tab-sadhana">
 
+    <!-- Sadhana Trends (top) -->
+    <div class="trends-card card-sadhana">
+      <div class="trends-header">
+        <span class="trends-title">90-Day Trends</span>
+        <span class="trends-subtitle">last 90 days per practice</span>
+      </div>
+      <div class="heatmap-grid" id="heatmap-sadhana"></div>
+      <div class="trend-habits" id="sadhana-trend-habits"></div>
+    </div>
+
     <div class="card card-sadhana">
       <div class="card-header">
         <div class="card-title-group">
@@ -199,16 +209,6 @@
           <span>✨ All practices complete today!</span>
         </div>
       </div>
-    </div>
-
-    <!-- Sadhana Trends -->
-    <div class="trends-card card-sadhana">
-      <div class="trends-header">
-        <span class="trends-title">3-Month Trends</span>
-        <span class="trends-subtitle">last 30 days per practice</span>
-      </div>
-      <div class="heatmap-grid" id="heatmap-sadhana"></div>
-      <div class="trend-habits" id="sadhana-trend-habits"></div>
     </div>
 
   </section>
@@ -234,6 +234,22 @@
 
   <!-- ── READING HABITS TAB ───────────────────────── -->
   <section class="tab-section" id="tab-reading">
+
+    <!-- Reading Trends (top) -->
+    <div class="trends-card card-reading">
+      <div class="trends-header">
+        <span class="trends-title">90-Day Trends</span>
+        <span class="trends-subtitle">last 90 days</span>
+      </div>
+      <div class="heatmap-grid" id="heatmap-reading"></div>
+      <div class="trend-habits">
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">📖 Read today</span>
+          <div class="trend-bars" id="bars-reading-did"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="card card-reading">
       <div class="card-header">
         <div class="card-title-group">
@@ -284,21 +300,6 @@
         <div class="field">
           <label class="field-label">Notes / Key Insights</label>
           <textarea class="input-textarea" id="readingNotes" data-field="notes" placeholder="What did you learn or reflect on today?" rows="3"></textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- Reading Trends -->
-    <div class="trends-card card-reading">
-      <div class="trends-header">
-        <span class="trends-title">3-Month Trends</span>
-        <span class="trends-subtitle">last 30 days</span>
-      </div>
-      <div class="heatmap-grid" id="heatmap-reading"></div>
-      <div class="trend-habits">
-        <div class="trend-habit-row">
-          <span class="trend-habit-label">📖 Read today</span>
-          <div class="trend-bars" id="bars-reading-did"></div>
         </div>
       </div>
     </div>
