@@ -138,7 +138,17 @@ function renderPracticeList() {
   });
   list.querySelectorAll('.practice-extra-inp').forEach(el => {
     el.addEventListener('input', () => {
-      getDayData(currentDate).sadhana[el.dataset.extra] = parseInt(el.value) || 0;
+      const val = parseInt(el.value) || 0;
+      getDayData(currentDate).sadhana[el.dataset.extra] = val;
+      if (val > 0) {
+        const practiceItem = el.closest('.practice-item');
+        const toggle = practiceItem?.querySelector('.practice-check');
+        if (toggle && !toggle.checked) {
+          toggle.checked = true;
+          getDayData(currentDate).sadhana[toggle.dataset.field] = true;
+          updateRing(); updateBanner(); renderTrends();
+        }
+      }
       saveData();
     });
   });
