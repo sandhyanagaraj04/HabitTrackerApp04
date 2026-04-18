@@ -1,19 +1,9 @@
-// ═══════════════════════════════════════════════════════════
-//  FIREBASE CONFIGURATION
-//  Replace ALL placeholder values with your own project config.
-//
-//  How to get these:
-//  1. Go to https://console.firebase.google.com
-//  2. Create a project (or open existing)
-//  3. Click the </> Web icon to add a web app
-//  4. Copy the firebaseConfig object values below
-// ═══════════════════════════════════════════════════════════
-
 const firebaseConfig = {
-  apiKey:            "PASTE_YOUR_API_KEY",
-  authDomain:        "PASTE_YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "PASTE_YOUR_PROJECT_ID",
-  storageBucket:     "PASTE_YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "PASTE_YOUR_SENDER_ID",
-  appId:             "PASTE_YOUR_APP_ID"
+  apiKey:            "AIzaSyDd3gt2BF1jVAh5jyTtG1CCoCxnp8xApEo",
+  authDomain:        "habit-tracker-4a504.firebaseapp.com",
+  projectId:         "habit-tracker-4a504",
+  storageBucket:     "habit-tracker-4a504.firebasestorage.app",
+  messagingSenderId: "547917969300",
+  appId:             "1:547917969300:web:f52db766cd3dbeefe44181",
+  measurementId:     "G-4HN19DBV1F"
 };
