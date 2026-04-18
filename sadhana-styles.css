@@ -257,6 +257,19 @@ a      { color: inherit; text-decoration: none; }
   line-height: 1.6;
 }
 
+/* ── SADHANA VIDEO ───────────────────────────────────────── */
+.sadhana-video {
+  position: relative; width: 100%; padding-top: 56.25%;
+  border-radius: var(--radius); overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.sadhana-video iframe {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; border: none;
+}
+
 /* ── SADHANA CARD ────────────────────────────────────────── */
 .sadhana-card {
   background: var(--surface);
