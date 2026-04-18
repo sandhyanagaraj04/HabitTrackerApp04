@@ -50,6 +50,10 @@
       <span class="nav-icon">⏱️</span>
       <span class="nav-label">Daily Tracker</span>
     </button>
+    <button class="nav-item nav-add-section" id="addSectionNavBtn">
+      <span class="nav-icon">＋</span>
+      <span class="nav-label">Add section</span>
+    </button>
 
     <div class="nav-group-label">Planner</div>
 
@@ -347,6 +351,33 @@
       </div>
     </div>
 
+    <!-- Health Trends -->
+    <div class="trends-card card-health">
+      <div class="trends-header">
+        <span class="trends-title">3-Month Trends</span>
+        <span class="trends-subtitle">last 30 days per habit</span>
+      </div>
+      <div class="heatmap-grid" id="heatmap-health"></div>
+      <div class="trend-habits">
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">😴 Sleep</span>
+          <div class="trend-bars" id="bars-sleep"></div>
+        </div>
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">🏃 Steps goal</span>
+          <div class="trend-bars" id="bars-steps"></div>
+        </div>
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">🍽️ Meals logged</span>
+          <div class="trend-bars" id="bars-meals"></div>
+        </div>
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">📱 Phone greyscale</span>
+          <div class="trend-bars" id="bars-phone"></div>
+        </div>
+      </div>
+    </div>
+
   </section>
 
   <!-- ── SADHANA TAB ─────────────────────────────────── -->
@@ -447,6 +478,37 @@
       </div>
     </div>
 
+    <!-- Sadhana Trends -->
+    <div class="trends-card card-sadhana">
+      <div class="trends-header">
+        <span class="trends-title">3-Month Trends</span>
+        <span class="trends-subtitle">last 30 days per practice</span>
+      </div>
+      <div class="heatmap-grid" id="heatmap-sadhana"></div>
+      <div class="trend-habits">
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">🪔 Guru Pooja</span>
+          <div class="trend-bars" id="bars-guru_pooja"></div>
+        </div>
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">🌀 Upa Yoga</span>
+          <div class="trend-bars" id="bars-upa_yoga"></div>
+        </div>
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">☀️ Surya Kriya</span>
+          <div class="trend-bars" id="bars-surya_kriya"></div>
+        </div>
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">🧘 Yoga Namaskar</span>
+          <div class="trend-bars" id="bars-yoga_namaskar"></div>
+        </div>
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">⚡ SCK</span>
+          <div class="trend-bars" id="bars-sck"></div>
+        </div>
+      </div>
+    </div>
+
   </section>
 
   <!-- ── T TAB ───────────────────────────────────────── -->
@@ -523,6 +585,22 @@
         </div>
       </div>
     </div>
+
+    <!-- Reading Trends -->
+    <div class="trends-card card-reading">
+      <div class="trends-header">
+        <span class="trends-title">3-Month Trends</span>
+        <span class="trends-subtitle">last 30 days</span>
+      </div>
+      <div class="heatmap-grid" id="heatmap-reading"></div>
+      <div class="trend-habits">
+        <div class="trend-habit-row">
+          <span class="trend-habit-label">📖 Read today</span>
+          <div class="trend-bars" id="bars-reading-did"></div>
+        </div>
+      </div>
+    </div>
+
   </section>
 
   <!-- ── DAILY TRACKER TAB ─────────────────────────── -->

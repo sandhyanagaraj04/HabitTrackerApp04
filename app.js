@@ -880,6 +880,63 @@ function renderCustomSections() {
   });
 }
 
+/* ── TRENDS ─────────────────────────────────────────────── */
+function renderHeatmap(containerId, scorer, color) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const today = todayStr();
+  const cells = [];
+  for (let i = 90; i >= 0; i--) {
+    const d = offsetDate(today, -i);
+    const score = Math.min(1, Math.max(0, scorer(d)));
+    const alpha = score < 0.01 ? 0.06 : 0.18 + score * 0.72;
+    cells.push(`<div class="heatmap-cell" style="background:${color};opacity:${alpha.toFixed(2)}" title="${d}"></div>`);
+  }
+  el.innerHTML = cells.join('');
+}
+
+function renderTrendBars(containerId, checker, color) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const today = todayStr();
+  const bars = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = offsetDate(today, -i);
+    const done = checker(d);
+    bars.push(`<div class="trend-bar${done ? ' done' : ''}" style="${done ? `background:${color}` : ''}" title="${d}"></div>`);
+  }
+  el.innerHTML = bars.join('');
+}
+
+function renderTrends() {
+  const SADHANA_PRACTICES = ['guru_pooja', 'upa_yoga', 'surya_kriya', 'yoga_namaskar', 'sck'];
+
+  renderHeatmap('heatmap-health', d => {
+    const h = data[d]?.health || {};
+    let done = 0;
+    if (h.sleep_time && h.wake_time) done++;
+    if ((parseInt(h.steps) || 0) >= STEPS_GOAL) done++;
+    if (h.breakfast || h.lunch || h.dinner) done++;
+    if (h.greyscale_on) done++;
+    return done / 4;
+  }, 'var(--health)');
+  renderTrendBars('bars-sleep',  d => !!(data[d]?.health?.sleep_time && data[d]?.health?.wake_time), 'var(--health)');
+  renderTrendBars('bars-steps',  d => (parseInt(data[d]?.health?.steps) || 0) >= STEPS_GOAL, 'var(--health)');
+  renderTrendBars('bars-meals',  d => !!(data[d]?.health?.breakfast || data[d]?.health?.lunch || data[d]?.health?.dinner), 'var(--health)');
+  renderTrendBars('bars-phone',  d => !!(data[d]?.health?.greyscale_on), 'var(--health)');
+
+  renderHeatmap('heatmap-sadhana', d => {
+    const s = data[d]?.sadhana || {};
+    return SADHANA_PRACTICES.filter(p => s[p]).length / SADHANA_PRACTICES.length;
+  }, 'var(--sadhana)');
+  SADHANA_PRACTICES.forEach(p =>
+    renderTrendBars(`bars-${p}`, d => !!(data[d]?.sadhana?.[p]), 'var(--sadhana)')
+  );
+
+  renderHeatmap('heatmap-reading', d => data[d]?.reading?.did_read ? 1 : 0, 'var(--reading)');
+  renderTrendBars('bars-reading-did', d => !!(data[d]?.reading?.did_read), 'var(--reading)');
+}
+
 /* ── FULL RENDER ────────────────────────────────────────── */
 function renderAll() {
   renderHeader();
@@ -891,6 +948,7 @@ function renderAll() {
   renderPlanner();
   renderMealPlanner();
   renderDailyTracker();
+  renderTrends();
 }
 
 /* ── NAVIGATION ─────────────────────────────────────────── */
@@ -907,17 +965,38 @@ function switchTab(tabName) {
   document.querySelectorAll('.tab-section').forEach(s =>
     s.classList.toggle('active', s.id === `tab-${tabName}`)
   );
-  closeSidebar();
+}
+
+function toggleSidebar() {
+  const sidebar  = document.getElementById('appSidebar');
+  const overlay  = document.getElementById('sidebarOverlay');
+  const header   = document.querySelector('.app-header');
+  const main     = document.querySelector('.main-content');
+  const isHiding = !sidebar.classList.contains('collapsed');
+  sidebar.classList.toggle('collapsed', isHiding);
+  overlay.classList.toggle('visible',   isHiding);
+  if (isHiding) {
+    if (header) header.style.marginLeft = '0';
+    if (main)   main.style.marginLeft   = '0';
+  } else {
+    if (header) header.style.marginLeft = '';
+    if (main)   main.style.marginLeft   = '';
+  }
 }
 
 function openSidebar() {
-  document.getElementById('appSidebar').classList.add('open');
-  document.getElementById('sidebarOverlay').classList.add('visible');
+  const sidebar = document.getElementById('appSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const header  = document.querySelector('.app-header');
+  const main    = document.querySelector('.main-content');
+  sidebar.classList.remove('collapsed');
+  overlay.classList.remove('visible');
+  if (header) header.style.marginLeft = '';
+  if (main)   main.style.marginLeft   = '';
 }
 
 function closeSidebar() {
-  document.getElementById('appSidebar').classList.remove('open');
-  document.getElementById('sidebarOverlay').classList.remove('visible');
+  /* no-op — sidebar stays visible; overlay only closes via toggleSidebar */
 }
 
 /* ── EVENT HANDLERS — HEALTH ────────────────────────────── */
@@ -1152,6 +1231,7 @@ function renderUserMenu(user) {
 /* ── AUTH — GOOGLE SIGN-IN ──────────────────────────────── */
 function signInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
   auth.signInWithPopup(provider).catch(err => {
     console.error('Sign-in error:', err);
     showToast('⚠️ Sign-in failed. Please try again.');
@@ -1217,9 +1297,9 @@ function init() {
   document.querySelector('.sidebar-footer .nav-item[data-tab="export"]')
     ?.addEventListener('click', () => switchTab('export'));
 
-  /* Hamburger / sidebar toggle (mobile) */
-  document.getElementById('sidebarToggle').addEventListener('click', openSidebar);
-  document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+  /* Hamburger — collapses sidebar on mobile; overlay restores it */
+  document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+  document.getElementById('sidebarOverlay').addEventListener('click', openSidebar);
 
   /* Planner — collapsible sections */
   document.querySelectorAll('.ps-header').forEach(hdr => {
@@ -1280,11 +1360,14 @@ function init() {
   /* Onboarding */
   document.getElementById('onboardingStart').addEventListener('click', hideOnboarding);
 
-  /* Sections modal */
-  document.getElementById('manageSectionsBtn').addEventListener('click', () => {
+  /* Sections modal — opened from planner or sidebar */
+  const openSectionsModal = () => {
     renderSectionsList();
     document.getElementById('sectionsModal').style.display = 'flex';
-  });
+  };
+  document.getElementById('manageSectionsBtn').addEventListener('click', openSectionsModal);
+  const addSectionNavBtn = document.getElementById('addSectionNavBtn');
+  if (addSectionNavBtn) addSectionNavBtn.addEventListener('click', openSectionsModal);
   document.getElementById('sectionsMgrClose').addEventListener('click', () => {
     document.getElementById('sectionsModal').style.display = 'none';
   });
