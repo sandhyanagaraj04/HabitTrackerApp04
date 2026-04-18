@@ -110,7 +110,8 @@ function defaultDay() {
     t: {},
     plan: { breakfast: '', lunch: '', snack: '', dinner: '' },
     reading: { did_read: false, book_title: '', author: '', pages_read: 0, duration_mins: 0, notes: '' },
-    tracker: {}
+    tracker: {},
+    priorities: ['', '', '']
   };
 }
 
@@ -549,6 +550,7 @@ function renderDailyTracker() {
   const label = document.getElementById('trackerDateLabel');
   if (label) label.textContent = formatDateFull(currentDate);
 
+  renderPriorities();
   renderPendingHabits();
 
   const container = document.getElementById('trackerSlots');
@@ -572,11 +574,14 @@ function renderDailyTracker() {
   container.innerHTML = slots.map(({ key, disp }) => {
     const isCurrent = key === nowKey;
     const val = tracker[key] || '';
-    return `<div class="tracker-slot${isCurrent ? ' current-slot' : ''}" data-key="${key}">
+    return `<div class="tracker-slot${isCurrent ? ' current-slot' : ''}${val ? ' has-value' : ''}" data-key="${key}">
       <span class="slot-time">${disp}</span>
-      <textarea class="slot-input${val ? ' has-content' : ''}" rows="1"
-        data-slot="${key}" placeholder="${isCurrent ? 'What are you doing now?' : ''}"
-        >${val}</textarea>
+      <div class="slot-body">
+        <div class="slot-display">${escapeHtml(val)}</div>
+        <textarea class="slot-input" rows="1" data-slot="${key}"
+          placeholder="${isCurrent ? 'What are you doing now?' : ''}">${val}</textarea>
+      </div>
+      <button class="slot-edit-btn" title="Edit entry" data-slot="${key}">✏️</button>
       <button class="slot-mic-btn" data-slot="${key}" title="Speak to fill">🎤</button>
     </div>`;
   }).join('');
@@ -588,7 +593,25 @@ function renderDailyTracker() {
       saveTrackerSlot(ta.dataset.slot, ta.value);
     });
     ta.addEventListener('blur', () => {
-      if (ta.value.trim()) parseTrackerEntry(ta.value, currentDate);
+      const slot = ta.closest('.tracker-slot');
+      const val  = ta.value.trim();
+      if (val) {
+        slot.querySelector('.slot-display').textContent = val;
+        slot.classList.add('has-value');
+        slot.classList.remove('editing');
+        parseTrackerEntry(val, currentDate);
+        renderPendingHabits();
+      } else {
+        slot.classList.remove('has-value', 'editing');
+      }
+    });
+  });
+
+  container.querySelectorAll('.slot-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const slot = btn.closest('.tracker-slot');
+      slot.classList.add('editing');
+      slot.querySelector('.slot-input').focus();
     });
   });
 
@@ -605,6 +628,10 @@ function renderDailyTracker() {
 function autoResizeTextarea(ta) {
   ta.style.height = 'auto';
   ta.style.height = Math.max(36, ta.scrollHeight) + 'px';
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function saveTrackerSlot(slotKey, value) {
@@ -720,11 +747,20 @@ function startSpeechInput(slotKey) {
   recognition.onresult = e => {
     const transcript = e.results[0][0].transcript;
     if (ta) {
-      ta.value = (ta.value ? ta.value + ' ' : '') + transcript;
-      ta.classList.add('has-content');
+      const newVal = (ta.value ? ta.value + ' ' : '') + transcript;
+      ta.value = newVal;
       autoResizeTextarea(ta);
-      saveTrackerSlot(slotKey, ta.value);
-      parseTrackerEntry(ta.value, currentDate);
+      saveTrackerSlot(slotKey, newVal);
+      parseTrackerEntry(newVal, currentDate);
+      // Update display in case parseTrackerEntry didn't trigger a full re-render
+      const slotEl = document.querySelector(`.tracker-slot[data-key="${slotKey}"]`);
+      if (slotEl) {
+        const dispEl = slotEl.querySelector('.slot-display');
+        if (dispEl) dispEl.textContent = newVal;
+        slotEl.classList.add('has-value');
+        slotEl.classList.remove('editing');
+      }
+      renderPendingHabits();
     }
   };
 
@@ -880,6 +916,17 @@ function renderCustomSections() {
   });
 }
 
+/* ── TOP 3 PRIORITIES ───────────────────────────────────── */
+function renderPriorities() {
+  const p = getDayData(currentDate).priorities || ['', '', ''];
+  document.querySelectorAll('.priority-input').forEach(inp => {
+    // Only update if not focused (avoid clobbering active typing)
+    if (document.activeElement !== inp) {
+      inp.value = p[parseInt(inp.dataset.idx)] || '';
+    }
+  });
+}
+
 /* ── TRENDS ─────────────────────────────────────────────── */
 function renderHeatmap(containerId, scorer, color) {
   const el = document.getElementById(containerId);
@@ -948,6 +995,7 @@ function renderAll() {
   renderPlanner();
   renderMealPlanner();
   renderDailyTracker();
+  renderPriorities();
   renderTrends();
 }
 
@@ -1006,7 +1054,7 @@ function initHealthEvents() {
     if (!el) return;
     el.addEventListener('change', () => {
       getDayData(currentDate).health[el.dataset.field] = el.value;
-      saveData(); updateComputed(); renderBadges(); renderWeekStrip();
+      saveData(); updateComputed(); renderBadges(); renderWeekStrip(); renderPendingHabits();
     });
   });
 
@@ -1015,7 +1063,7 @@ function initHealthEvents() {
     if (!el) return;
     el.addEventListener('input', () => {
       getDayData(currentDate).health[el.dataset.field] = el.value ? parseInt(el.value) : '';
-      saveData(); updateComputed(); renderBadges(); renderWeekStrip();
+      saveData(); updateComputed(); renderBadges(); renderWeekStrip(); renderPendingHabits();
     });
   });
 
@@ -1026,7 +1074,7 @@ function initHealthEvents() {
       const val = Math.max(0, (parseInt(target.value) || 0) + parseInt(btn.dataset.delta));
       target.value = val;
       getDayData(currentDate).health[target.dataset.field] = val;
-      saveData(); updateComputed(); renderBadges(); renderWeekStrip();
+      saveData(); updateComputed(); renderBadges(); renderWeekStrip(); renderPendingHabits();
     });
   });
 
@@ -1034,7 +1082,7 @@ function initHealthEvents() {
     if (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && el.type === 'text')) {
       el.addEventListener('change', () => {
         getDayData(currentDate).health[el.dataset.field] = el.value;
-        saveData(); renderBadges(); renderWeekStrip();
+        saveData(); renderBadges(); renderWeekStrip(); renderPendingHabits();
       });
     }
   });
@@ -1053,7 +1101,7 @@ function initSadhanaEvents() {
   document.querySelectorAll('.sadhana-check').forEach(el => {
     el.addEventListener('change', () => {
       getDayData(currentDate).sadhana[el.dataset.field] = el.checked;
-      saveData(); updateSadhanaBanner(); renderBadges(); renderWeekStrip();
+      saveData(); updateSadhanaBanner(); renderBadges(); renderWeekStrip(); renderPendingHabits();
     });
   });
 }
@@ -1328,7 +1376,7 @@ function init() {
   if (didRead) {
     didRead.addEventListener('change', () => {
       getDayData(currentDate).reading.did_read = didRead.checked;
-      saveData(); renderBadges(); renderWeekStrip();
+      saveData(); renderBadges(); renderWeekStrip(); renderPendingHabits();
     });
   }
   ['readingTitle','readingAuthor'].forEach(id => {
@@ -1356,6 +1404,21 @@ function init() {
   }
 
   /* Reading ± buttons (reuse existing .num-btn logic, handled by existing handler) */
+
+  /* Top 3 priorities — shared inputs across tracker and planner cards */
+  document.querySelectorAll('.priority-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const d = getDayData(currentDate);
+      if (!d.priorities) d.priorities = ['', '', ''];
+      const idx = parseInt(inp.dataset.idx);
+      d.priorities[idx] = inp.value;
+      saveData();
+      // Sync the same index in the other priorities card
+      document.querySelectorAll(`.priority-input[data-idx="${idx}"]`).forEach(other => {
+        if (other !== inp) other.value = inp.value;
+      });
+    });
+  });
 
   /* Onboarding */
   document.getElementById('onboardingStart').addEventListener('click', hideOnboarding);

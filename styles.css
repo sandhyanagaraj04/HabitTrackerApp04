@@ -2201,6 +2201,50 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 .pending-chip:hover { border-color: var(--border-h); color: var(--text); }
 
+/* ── PRIORITIES CARD ─────────────────────────────────────── */
+.priorities-card {
+  border-radius: var(--radius);
+  border: 1px solid rgba(251,191,36,0.25);
+  background: rgba(251,191,36,0.06);
+  padding: 14px 16px 16px;
+  margin-bottom: 12px;
+}
+.priorities-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--t);
+  margin-bottom: 10px;
+  letter-spacing: 0.1px;
+}
+.priorities-list { display: flex; flex-direction: column; gap: 8px; }
+.priority-item { display: flex; align-items: center; gap: 10px; }
+.priority-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(251,191,36,0.2);
+  color: var(--t);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.priority-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 4px 2px 5px;
+  transition: border-color var(--transition);
+}
+.priority-input:focus { outline: none; border-bottom-color: var(--t); }
+.priority-input::placeholder { color: var(--text-dim); }
+
 /* Tracker slots */
 .tracker-body {
   padding: 0;
@@ -2231,8 +2275,21 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 .tracker-slot.current-slot .slot-time { color: var(--tracker); }
 
+/* Slot body holds display text and textarea */
+.slot-body { flex: 1; min-width: 0; }
+
+.slot-display {
+  display: none;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  padding: 8px 0 7px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .slot-input {
-  flex: 1;
+  width: 100%;
   background: transparent;
   border: none;
   color: var(--text);
@@ -2247,7 +2304,36 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 }
 .slot-input:focus { outline: none; }
 .slot-input::placeholder { color: var(--text-dim); }
-.slot-input.has-content { color: var(--text); }
+
+/* Edit button (pencil) — hidden by default, shown in view mode */
+.slot-edit-btn {
+  display: none;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 6px;
+  font-size: 12px;
+  transition: background var(--transition), color var(--transition);
+}
+.slot-edit-btn:hover { background: var(--surface-h); color: var(--text); }
+
+/* VIEW MODE: slot has saved content */
+.tracker-slot.has-value .slot-display  { display: block; }
+.tracker-slot.has-value .slot-edit-btn { display: flex; }
+.tracker-slot.has-value .slot-input    { display: none; }
+.tracker-slot.has-value .slot-mic-btn  { display: none; }
+
+/* EDIT MODE: user clicked pencil or slot is being edited */
+.tracker-slot.has-value.editing .slot-display  { display: none; }
+.tracker-slot.has-value.editing .slot-edit-btn { display: none; }
+.tracker-slot.has-value.editing .slot-input    { display: block; }
+.tracker-slot.has-value.editing .slot-mic-btn  { display: flex; }
 
 .slot-mic-btn {
   width: 30px;
