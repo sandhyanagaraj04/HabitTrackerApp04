@@ -583,6 +583,14 @@ if (!FIREBASE_CONFIGURED) {
       currentUser = user;
       showLoading(true);
       showLogin(false);
+      // Save/update user profile so admin dashboard can see all users
+      db.collection('users').doc(user.uid).set({
+        name:       user.displayName || '',
+        email:      user.email || '',
+        photoURL:   user.photoURL || '',
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt:  firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true }).catch(() => {});
       await loadAllData();
       renderUserMenu(user);
       renderAll();

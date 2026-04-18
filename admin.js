@@ -1,0 +1,367 @@
+'use strict';
+
+/* ── FIREBASE ───────────────────────────────────────────── */
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+/* ── HELPERS ────────────────────────────────────────────── */
+function todayStr() { return new Date().toISOString().slice(0,10); }
+
+function offsetDate(str, days) {
+  const [y,m,d] = str.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate() + days);
+  return dt.toISOString().slice(0,10);
+}
+
+function calcHours(from, to) {
+  if (!from || !to) return null;
+  const [fh,fm] = from.split(':').map(Number);
+  const [th,tm] = to.split(':').map(Number);
+  let diff = (th*60+tm) - (fh*60+fm);
+  if (diff < 0) diff += 1440;
+  return Math.round(diff / 60 * 10) / 10;
+}
+
+function avg(arr) {
+  const nums = arr.filter(n => n != null && !isNaN(n) && n > 0);
+  return nums.length ? (nums.reduce((a,b) => a+b, 0) / nums.length) : null;
+}
+
+function formatDate(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+}
+
+function calcStreak(days) {
+  let streak = 0;
+  let d = todayStr();
+  const sorted = Object.keys(days).sort();
+  if (!sorted.length) return 0;
+  while (days[d]) {
+    const h = days[d].health || {};
+    const s = days[d].sadhana || {};
+    if (h.sleep_time || h.steps || Object.values(s).some(Boolean)) {
+      streak++; d = offsetDate(d, -1);
+    } else break;
+  }
+  return streak;
+}
+
+/* ── CHECK ADMIN ────────────────────────────────────────── */
+async function isAdmin(uid) {
+  try {
+    const snap = await db.collection('admins').doc(uid).get();
+    return snap.exists;
+  } catch { return false; }
+}
+
+/* ── LOAD ALL DATA ──────────────────────────────────────── */
+async function loadAdminData() {
+  // Load all user profiles
+  const usersSnap = await db.collection('users').get();
+  const users = {};
+  usersSnap.forEach(doc => { users[doc.id] = { ...doc.data(), uid: doc.id, days: {} }; });
+
+  // Load all days via collection group query
+  const daysSnap = await db.collectionGroup('days').get();
+  daysSnap.forEach(doc => {
+    const uid = doc.ref.parent.parent.id;
+    if (users[uid]) users[uid].days[doc.id] = doc.data();
+  });
+
+  return Object.values(users);
+}
+
+/* ── ANALYTICS ──────────────────────────────────────────── */
+function computeAnalytics(users) {
+  const today = todayStr();
+  const weekAgo = offsetDate(today, -7);
+
+  let totalSleepHrs = [], totalSteps = [], totalSadhana = [];
+  let sadhanaFields = { guru_pooja:0, upa_yoga:0, surya_kriya:0, yoga_namaskar:0, sck:0 };
+  let sadhanaTotal  = 0;
+  let qualityCounts = [0,0,0,0,0]; // indices 0-4 = stars 1-5
+  let mealSources   = { home:0, outside:0, ordered:0, canteen:0, skipped:0 };
+  let stepsByDay    = [0,0,0,0,0,0,0]; // Sun-Sat
+  let stepsByDayCount = [0,0,0,0,0,0,0];
+  let activeThisWeek = 0;
+  let topStreak = 0;
+
+  const userStats = users.map(u => {
+    const days  = u.days || {};
+    const dates = Object.keys(days).sort();
+    let userSleep=[], userSteps=[], userSadhana=[];
+    let lastActiveDate = null;
+
+    dates.forEach(dateStr => {
+      const day  = days[dateStr];
+      const h    = day.health  || {};
+      const s    = day.sadhana || {};
+      const dt   = new Date(...dateStr.split('-').map((v,i)=>i===1?v-1:+v));
+      const dow  = dt.getDay();
+
+      // Sleep
+      const sh = calcHours(h.sleep_time, h.wake_time);
+      if (sh && sh > 2 && sh < 14) {
+        userSleep.push(sh);
+        totalSleepHrs.push(sh);
+      }
+
+      // Steps
+      const steps = parseInt(h.steps) || 0;
+      if (steps > 0) {
+        userSteps.push(steps);
+        totalSteps.push(steps);
+        stepsByDay[dow] += steps;
+        stepsByDayCount[dow]++;
+      }
+
+      // Sleep quality
+      const sq = parseInt(h.sleep_quality) || 0;
+      if (sq >= 1 && sq <= 5) qualityCounts[sq-1]++;
+
+      // Meal sources
+      ['breakfast_source','lunch_source','snack_source','dinner_source'].forEach(f => {
+        const src = h[f];
+        if (src && mealSources[src] !== undefined) mealSources[src]++;
+      });
+
+      // Sadhana
+      const done = Object.values(s).filter(Boolean).length;
+      const total = Object.keys(s).length || 5;
+      const pct = total ? Math.round(done/total*100) : 0;
+      userSadhana.push(pct);
+      totalSadhana.push(pct);
+      Object.keys(sadhanaFields).forEach(k => {
+        if (s[k]) sadhanaFields[k]++;
+      });
+      sadhanaTotal++;
+
+      if (!lastActiveDate || dateStr > lastActiveDate) lastActiveDate = dateStr;
+    });
+
+    // Active this week
+    if (lastActiveDate && lastActiveDate >= weekAgo) activeThisWeek++;
+
+    const streak = calcStreak(days);
+    if (streak > topStreak) topStreak = streak;
+
+    return {
+      uid:        u.uid,
+      name:       u.name       || 'Unknown',
+      email:      u.email      || '—',
+      photoURL:   u.photoURL   || '',
+      createdAt:  u.createdAt,
+      lastActive: u.lastActive,
+      lastActiveDate,
+      daysLogged: dates.length,
+      avgSleep:   avg(userSleep),
+      avgSteps:   avg(userSteps),
+      avgSadhana: avg(userSadhana),
+      streak
+    };
+  });
+
+  // Steps by day of week averages
+  const avgStepsByDay = stepsByDay.map((s,i) =>
+    stepsByDayCount[i] ? Math.round(s / stepsByDayCount[i]) : 0
+  );
+
+  // Sadhana completion %
+  const sadhanaCompletionPct = Object.fromEntries(
+    Object.entries(sadhanaFields).map(([k,v]) => [k, sadhanaTotal ? Math.round(v/sadhanaTotal*100) : 0])
+  );
+
+  return {
+    totalUsers:   users.length,
+    activeThisWeek,
+    avgSleep:     avg(totalSleepHrs),
+    avgSteps:     avg(totalSteps),
+    avgSadhana:   avg(totalSadhana),
+    topStreak,
+    qualityCounts,
+    mealSources,
+    sadhanaCompletionPct,
+    avgStepsByDay,
+    userStats
+  };
+}
+
+/* ── RENDER STATS ───────────────────────────────────────── */
+function renderStats(a) {
+  document.getElementById('statTotalUsers').textContent  = a.totalUsers;
+  document.getElementById('statActiveWeek').textContent  = a.activeThisWeek;
+  document.getElementById('statAvgSleep').textContent    = a.avgSleep   ? a.avgSleep.toFixed(1)   : '—';
+  document.getElementById('statAvgSteps').textContent    = a.avgSteps   ? Math.round(a.avgSteps).toLocaleString() : '—';
+  document.getElementById('statTopStreak').textContent   = a.topStreak  ? `${a.topStreak} days`   : '—';
+  document.getElementById('statAvgSadhana').textContent  = a.avgSadhana ? `${Math.round(a.avgSadhana)}%` : '—';
+}
+
+/* ── CHARTS ─────────────────────────────────────────────── */
+const CHART_DEFAULTS = {
+  color: '#7c8db5',
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { ticks: { color:'#7c8db5', font:{ family:'Inter', size:11 } }, grid: { color:'rgba(255,255,255,0.05)' } },
+    y: { ticks: { color:'#7c8db5', font:{ family:'Inter', size:11 } }, grid: { color:'rgba(255,255,255,0.05)' } }
+  }
+};
+
+function makeChart(id, type, data, options={}) {
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx, { type, data, options: { ...CHART_DEFAULTS, ...options, responsive:true, maintainAspectRatio: type!=='doughnut' } });
+}
+
+let charts = {};
+
+function renderCharts(a) {
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+
+  // Sadhana horizontal bar
+  const sadhanaLabels = ['Guru Pooja','Upa Yoga','Surya Kriya','Yoga Namaskar','SCK'];
+  const sadhanaKeys   = ['guru_pooja','upa_yoga','surya_kriya','yoga_namaskar','sck'];
+  charts.sadhana = makeChart('sadhanaChart', 'bar', {
+    labels: sadhanaLabels,
+    datasets: [{ data: sadhanaKeys.map(k => a.sadhanaCompletionPct[k]),
+      backgroundColor: 'rgba(167,139,250,0.7)', borderColor: '#a78bfa',
+      borderWidth: 1, borderRadius: 6 }]
+  }, { indexAxis:'y', scales: { ...CHART_DEFAULTS.scales,
+      x: { ...CHART_DEFAULTS.scales.x, max:100, ticks: { ...CHART_DEFAULTS.scales.x.ticks, callback: v => v+'%' } }
+  }});
+
+  // Sleep quality bar
+  charts.sleepQ = makeChart('sleepQualityChart', 'bar', {
+    labels: ['⭐','⭐⭐','⭐⭐⭐','⭐⭐⭐⭐','⭐⭐⭐⭐⭐'],
+    datasets: [{ data: a.qualityCounts,
+      backgroundColor: ['rgba(248,113,113,0.7)','rgba(251,191,36,0.7)','rgba(96,165,250,0.7)','rgba(52,211,153,0.5)','rgba(52,211,153,0.9)'],
+      borderRadius: 6 }]
+  });
+
+  // Meal source doughnut
+  const mealLabels = ['Home 🏠','Outside 🏪','Ordered 📦','Canteen 🏢','Skipped ⏭️'];
+  const mealKeys   = ['home','outside','ordered','canteen','skipped'];
+  const mealVals   = mealKeys.map(k => a.mealSources[k]);
+  if (mealVals.some(v => v > 0)) {
+    charts.meal = makeChart('mealSourceChart', 'doughnut', {
+      labels: mealLabels,
+      datasets: [{ data: mealVals,
+        backgroundColor: ['rgba(52,211,153,0.8)','rgba(251,191,36,0.8)','rgba(96,165,250,0.8)','rgba(167,139,250,0.8)','rgba(248,113,113,0.8)'],
+        borderColor: 'rgba(0,0,0,0.3)', borderWidth: 1 }]
+    }, { plugins: { legend: { display:true, position:'right',
+        labels: { color:'#7c8db5', font:{ family:'Inter', size:11 }, padding:12 } } } });
+  }
+
+  // Steps by day of week
+  charts.dayOfWeek = makeChart('dayOfWeekChart', 'bar', {
+    labels: DAY_NAMES,
+    datasets: [{ data: a.avgStepsByDay,
+      backgroundColor: 'rgba(96,165,250,0.7)', borderColor:'#60a5fa',
+      borderWidth: 1, borderRadius: 6 }]
+  }, { scales: { ...CHART_DEFAULTS.scales,
+      y: { ...CHART_DEFAULTS.scales.y, ticks: { ...CHART_DEFAULTS.scales.y.ticks, callback: v => v.toLocaleString() } }
+  }});
+}
+
+/* ── RENDER USERS TABLE ─────────────────────────────────── */
+let allUserStats = [];
+
+function renderUsersTable(users, filter='') {
+  const tbody = document.getElementById('usersTableBody');
+  const low   = filter.toLowerCase();
+  const filtered = users.filter(u =>
+    !filter || u.name.toLowerCase().includes(low) || u.email.toLowerCase().includes(low)
+  );
+
+  document.getElementById('userCount').textContent = `${filtered.length} of ${users.length} users`;
+
+  tbody.innerHTML = filtered.map(u => `
+    <tr>
+      <td>
+        <div class="user-cell">
+          ${u.photoURL ? `<img class="table-avatar" src="${u.photoURL}" alt="">` : `<div class="table-avatar table-avatar-placeholder">${(u.name[0]||'?').toUpperCase()}</div>`}
+          <span class="user-cell-name">${u.name}</span>
+        </div>
+      </td>
+      <td class="cell-muted">${u.email}</td>
+      <td class="cell-muted">${formatDate(u.createdAt)}</td>
+      <td class="cell-muted">${u.lastActiveDate || '—'}</td>
+      <td><span class="badge">${u.daysLogged}</span></td>
+      <td>${u.avgSleep   ? u.avgSleep.toFixed(1)+'h'               : '—'}</td>
+      <td>${u.avgSteps   ? Math.round(u.avgSteps).toLocaleString() : '—'}</td>
+      <td>
+        <div class="sadhana-bar-wrap">
+          <div class="sadhana-bar" style="width:${u.avgSadhana||0}%"></div>
+          <span>${u.avgSadhana ? Math.round(u.avgSadhana)+'%' : '—'}</span>
+        </div>
+      </td>
+      <td>${u.streak ? `<span class="streak-badge">🔥 ${u.streak}</span>` : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+/* ── TOAST ──────────────────────────────────────────────── */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ── MAIN ───────────────────────────────────────────────── */
+async function loadDashboard() {
+  try {
+    const users    = await loadAdminData();
+    const analytics = computeAnalytics(users);
+    allUserStats   = analytics.userStats;
+
+    renderStats(analytics);
+    renderCharts(analytics);
+    renderUsersTable(allUserStats);
+
+    document.getElementById('lastUpdated').textContent =
+      `Last updated: ${new Date().toLocaleTimeString()}`;
+  } catch (err) {
+    console.error(err);
+    showToast('⚠️ Error loading data: ' + err.message);
+  }
+}
+
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'index.html'; return; }
+
+  document.getElementById('adminAvatar').src = user.photoURL || '';
+
+  const admin = await isAdmin(user.uid);
+  document.getElementById('loadingScreen').style.display = 'none';
+
+  if (!admin) {
+    // Show UID in console to help them set up admin access
+    console.log('%c Your UID (add this to Firestore admins collection):', 'color:#34d399;font-weight:bold', user.uid);
+    document.getElementById('accessDenied').style.display = 'flex';
+    return;
+  }
+
+  document.getElementById('dashboard').style.display = 'block';
+  await loadDashboard();
+
+  // Search
+  document.getElementById('userSearch').addEventListener('input', e => {
+    renderUsersTable(allUserStats, e.target.value);
+  });
+
+  // Refresh
+  document.getElementById('refreshBtn').addEventListener('click', async () => {
+    document.getElementById('refreshBtn').disabled = true;
+    await loadDashboard();
+    document.getElementById('refreshBtn').disabled = false;
+    showToast('✅ Data refreshed');
+  });
+});
