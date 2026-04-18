@@ -4,24 +4,24 @@
 
 /* ── PRACTICES LIST ─────────────────────────────────────── */
 const PRACTICES = [
-  { id: 'guru_pooja',          name: 'Guru Pooja',                      icon: '🪔', desc: 'Daily reverence & offering' },
-  { id: 'upa_yoga',            name: 'Upa Yoga',                        icon: '🌀', desc: 'Activating the system' },
-  { id: 'yoga_namaskar',       name: 'Yoga Namaskar',                   icon: '🧘', desc: 'Salutation to the sun' },
-  { id: 'surya_kriya',         name: 'Surya Kriya',                     icon: '☀️', desc: 'Solar energy alignment' },
-  { id: 'asanas',              name: 'Asanas',                          icon: '🤸', desc: 'Physical postures' },
-  { id: 'sck_morning',         name: 'Shakti Chalana Kriya (Morning)',  icon: '⚡', desc: 'Morning energy activation' },
-  { id: 'shambhavi_morning',   name: 'Shambhavi (Morning)',             icon: '🌅', desc: 'Morning inner vision practice' },
-  { id: 'shoonya_mid',         name: 'Shoonya (Mid Morning)',           icon: '🌌', desc: 'Emptiness meditation' },
-  { id: 'miracle_of_mind',     name: 'Miracle of Mind',                 icon: '🧠', desc: 'Mind training practice' },
-  { id: 'devi_stuti',          name: 'Devi Stuti',                      icon: '🌸', desc: 'Devotional chanting' },
-  { id: 'achala_arpanam',      name: 'Achala Arpanam',                  icon: '🏔️', desc: 'Offering to the stillness' },
-  { id: 'infinity_meditation', name: 'Infinity Meditation',             icon: '♾️', desc: 'Boundless awareness' },
-  { id: 'sukha_kriya',         name: 'Sukha Kriya',                     icon: '😌', desc: 'Effortless action' },
-  { id: 'aum_chanting',        name: 'Aum Chanting',                    icon: '🔔', desc: 'Sacred sound vibration' },
-  { id: 'nadi_shuddhi',        name: 'Nadi Shuddhi',                    icon: '🌬️', desc: 'Energy channel purification' },
-  { id: 'shoonya_evening',     name: 'Shoonya (Evening)',               icon: '🌙', desc: 'Evening emptiness meditation' },
-  { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: 'Evening energy activation' },
-  { id: 'shambhavi_evening',   name: 'Shambhavi (Evening)',             icon: '🌅', desc: 'Evening inner vision practice' },
+  { id: 'guru_pooja',          name: 'Guru Pooja',                      icon: '🪔', desc: 'An invitation to the Divine' },
+  { id: 'upa_yoga',            name: 'Upa Yoga',                        icon: '🌀', desc: '' },
+  { id: 'yoga_namaskar',       name: 'Yoga Namaskar',                   icon: '🧘', desc: '' },
+  { id: 'surya_kriya',         name: 'Surya Kriya',                     icon: '☀️', desc: '', extra: { id: 'surya_kriya_cycles', label: 'Cycles' } },
+  { id: 'asanas',              name: 'Asanas',                          icon: '🤸', desc: '' },
+  { id: 'sck_morning',         name: 'Shakti Chalana Kriya (Morning)',  icon: '⚡', desc: '', extra: { id: 'sck_morning_kapalabhatis', label: 'Kapalabhatis / cycle' } },
+  { id: 'shambhavi_morning',   name: 'Shambhavi (Morning)',             icon: '🌅', desc: '' },
+  { id: 'shoonya_mid',         name: 'Shoonya (Mid Morning)',           icon: '🌌', desc: '' },
+  { id: 'miracle_of_mind',     name: 'Miracle of Mind',                 icon: '🧠', desc: '', extra: { id: 'miracle_of_mind_mins', label: 'Minutes' } },
+  { id: 'devi_stuti',          name: 'Devi Stuti',                      icon: '🌸', desc: '', extra: { id: 'devi_stuti_cycles', label: 'Cycles' } },
+  { id: 'achala_arpanam',      name: 'Achala Arpanam',                  icon: '🏔️', desc: '' },
+  { id: 'infinity_meditation', name: 'Infinity Meditation',             icon: '♾️', desc: '' },
+  { id: 'sukha_kriya',         name: 'Sukha Kriya',                     icon: '😌', desc: '' },
+  { id: 'aum_chanting',        name: 'Aum Chanting',                    icon: '🔔', desc: '' },
+  { id: 'nadi_shuddhi',        name: 'Nadi Shuddhi',                    icon: '🌬️', desc: '' },
+  { id: 'shoonya_evening',     name: 'Shoonya (Evening)',               icon: '🌙', desc: '' },
+  { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: '', extra: { id: 'sck_evening_kapalabhatis', label: 'Kapalabhatis / cycle' } },
+  { id: 'shambhavi_evening',   name: 'Shambhavi (Evening)',             icon: '🌅', desc: '' },
 ];
 
 /* ── STATE ───────────────────────────────────────────────── */
@@ -71,7 +71,10 @@ function showLogin(on) {
 
 /* ── DATA LAYER ──────────────────────────────────────────── */
 function defaultSadhana() {
-  return Object.fromEntries(PRACTICES.map(p => [p.id, false]));
+  return {
+    ...Object.fromEntries(PRACTICES.map(p => [p.id, false])),
+    ...Object.fromEntries(PRACTICES.filter(p => p.extra).map(p => [p.extra.id, 0]))
+  };
 }
 
 function getDayData(dateStr) {
@@ -114,7 +117,11 @@ function renderPracticeList() {
         <span class="practice-icon">${p.icon}</span>
         <div>
           <div class="practice-name">${p.name}</div>
-          <div class="practice-desc">${p.desc}</div>
+          ${p.desc ? `<div class="practice-desc">${p.desc}</div>` : ''}
+          ${p.extra ? `<div class="practice-extra">
+            <input type="number" class="practice-num practice-extra-inp" data-extra="${p.extra.id}" placeholder="0" min="0">
+            <span class="practice-extra-label">${p.extra.label}</span>
+          </div>` : ''}
         </div>
       </div>
       <label class="toggle">
@@ -127,10 +134,13 @@ function renderPracticeList() {
   list.querySelectorAll('.practice-check').forEach(el => {
     el.addEventListener('change', () => {
       getDayData(currentDate).sadhana[el.dataset.field] = el.checked;
+      saveData(); updateRing(); updateBanner(); renderTrends();
+    });
+  });
+  list.querySelectorAll('.practice-extra-inp').forEach(el => {
+    el.addEventListener('input', () => {
+      getDayData(currentDate).sadhana[el.dataset.extra] = parseInt(el.value) || 0;
       saveData();
-      updateRing();
-      updateBanner();
-      renderTrends();
     });
   });
 }
@@ -140,6 +150,9 @@ function renderSadhana() {
   const s = getDayData(currentDate).sadhana;
   document.querySelectorAll('.practice-check').forEach(el => {
     el.checked = s[el.dataset.field] || false;
+  });
+  document.querySelectorAll('.practice-extra-inp').forEach(el => {
+    el.value = s[el.dataset.extra] || '';
   });
   updateRing();
   updateBanner();
