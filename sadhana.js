@@ -130,6 +130,7 @@ function renderPracticeList() {
       saveData();
       updateRing();
       updateBanner();
+      renderTrends();
     });
   });
 }
@@ -160,6 +161,57 @@ function updateBanner() {
   document.getElementById('completionBanner').style.display = all ? 'block' : 'none';
 }
 
+/* ── RENDER — TRENDS ─────────────────────────────────────── */
+function renderTrends() {
+  renderHeatmap();
+  renderTrendRows();
+}
+
+function renderHeatmap() {
+  const el = document.getElementById('heatmapSadhana');
+  if (!el) return;
+  const today = todayStr();
+  const cells = [];
+  for (let i = 90; i >= 0; i--) {
+    const d     = offsetDate(today, -i);
+    const s     = data[d]?.sadhana || {};
+    const done  = PRACTICES.filter(p => s[p.id]).length;
+    const score = done / PRACTICES.length;
+    const alpha = score < 0.01 ? 0.05 : 0.15 + score * 0.75;
+    cells.push(`<div class="heatmap-cell" style="background:var(--primary);opacity:${alpha.toFixed(2)}" title="${d}: ${done}/${PRACTICES.length}"></div>`);
+  }
+  el.innerHTML = cells.join('');
+}
+
+function renderTrendRows() {
+  const container = document.getElementById('trendHabits');
+  if (!container) return;
+
+  /* Build rows HTML once (labels + bar containers) */
+  if (!container.dataset.built) {
+    container.innerHTML = PRACTICES.map(p => `
+      <div class="trend-habit-row">
+        <span class="trend-habit-label">${p.icon} ${p.name}</span>
+        <div class="trend-bars" id="tbars-${p.id}"></div>
+      </div>`).join('');
+    container.dataset.built = '1';
+  }
+
+  /* Fill bar content */
+  const today = todayStr();
+  PRACTICES.forEach(p => {
+    const el = document.getElementById(`tbars-${p.id}`);
+    if (!el) return;
+    const bars = [];
+    for (let i = 89; i >= 0; i--) {
+      const d    = offsetDate(today, -i);
+      const done = !!(data[d]?.sadhana?.[p.id]);
+      bars.push(`<div class="trend-bar${done ? ' done' : ''}" style="${done ? 'background:var(--primary)' : ''}" title="${d}"></div>`);
+    }
+    el.innerHTML = bars.join('');
+  });
+}
+
 /* ── RENDER — DATE HEADER ────────────────────────────────── */
 function renderDateHeader() {
   const label = document.getElementById('dateLabel');
@@ -176,6 +228,7 @@ function navigateTo(dateStr) {
   currentDate = dateStr;
   renderDateHeader();
   renderSadhana();
+  renderTrends();
 }
 
 /* ── USER MENU ───────────────────────────────────────────── */
@@ -242,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderUserMenu(user);
       renderDateHeader();
       renderSadhana();
+      renderTrends();
       showLoading(false);
     } else {
       currentUser = null;
