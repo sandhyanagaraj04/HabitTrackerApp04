@@ -224,15 +224,23 @@ body {
 .sidebar-user .user-name  { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user .user-email { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.sidebar-user .user-dropdown {
-  position: absolute;
-  bottom: 100%;
-  left: 10px; right: 10px;
-  background: var(--bg2);
-  border: 1px solid var(--border-h);
-  border-radius: var(--radius-sm);
-  padding: 8px;
-  box-shadow: var(--shadow);
+.sidebar-user .signout-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.sidebar-user .signout-btn:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 /* Sidebar overlay (mobile) */

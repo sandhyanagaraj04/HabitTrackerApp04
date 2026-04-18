@@ -1148,19 +1148,6 @@ function renderUserMenu(user) {
   }
 }
 
-/* ── USER AVATAR TOGGLE (sidebar) ───────────────────────── */
-function initUserMenuToggle() {
-  document.getElementById('userPhoto').addEventListener('click', () => {
-    const dd = document.getElementById('userDropdown');
-    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
-  });
-  document.addEventListener('click', e => {
-    if (!e.target.closest('#userMenu')) {
-      const dd = document.getElementById('userDropdown');
-      if (dd) dd.style.display = 'none';
-    }
-  });
-}
 
 /* ── AUTH — GOOGLE SIGN-IN ──────────────────────────────── */
 function signInWithGoogle() {
@@ -1366,8 +1353,6 @@ function init() {
     showConfirm('Sign out?', 'Your data is safely saved in the cloud.', signOut, 'Sign out');
   });
 
-  /* User avatar dropdown (sidebar) */
-  initUserMenuToggle();
 
   /* Keyboard navigation */
   document.addEventListener('keydown', e => {
