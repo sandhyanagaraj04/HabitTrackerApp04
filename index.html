@@ -192,79 +192,7 @@
       <div class="card-body">
         <p class="card-subtitle">Your daily spiritual practices</p>
 
-        <div class="practice-list">
-
-          <div class="practice-item" data-practice="guru_pooja">
-            <div class="practice-info">
-              <span class="practice-icon">🪔</span>
-              <div>
-                <div class="practice-name">Guru Pooja</div>
-                <div class="practice-desc">Daily reverence & offering</div>
-              </div>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" class="sadhana-check" data-field="guru_pooja">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="practice-item" data-practice="upa_yoga">
-            <div class="practice-info">
-              <span class="practice-icon">🌀</span>
-              <div>
-                <div class="practice-name">Upa Yoga</div>
-                <div class="practice-desc">Activating the system</div>
-              </div>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" class="sadhana-check" data-field="upa_yoga">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="practice-item" data-practice="surya_kriya">
-            <div class="practice-info">
-              <span class="practice-icon">☀️</span>
-              <div>
-                <div class="practice-name">Surya Kriya</div>
-                <div class="practice-desc">Solar energy alignment</div>
-              </div>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" class="sadhana-check" data-field="surya_kriya">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="practice-item" data-practice="yoga_namaskar">
-            <div class="practice-info">
-              <span class="practice-icon">🧘</span>
-              <div>
-                <div class="practice-name">Yoga Namaskar</div>
-                <div class="practice-desc">Salutation to the sun</div>
-              </div>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" class="sadhana-check" data-field="yoga_namaskar">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="practice-item" data-practice="sck">
-            <div class="practice-info">
-              <span class="practice-icon">⚡</span>
-              <div>
-                <div class="practice-name">SCK</div>
-                <div class="practice-desc">Shakti Chalana Kriya</div>
-              </div>
-            </div>
-            <label class="toggle">
-              <input type="checkbox" class="sadhana-check" data-field="sck">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-        </div>
+        <div class="practice-list" id="practiceList"></div>
 
         <!-- Sadhana completion banner -->
         <div class="completion-banner" id="sadhanaBanner" style="display:none">
@@ -280,28 +208,7 @@
         <span class="trends-subtitle">last 30 days per practice</span>
       </div>
       <div class="heatmap-grid" id="heatmap-sadhana"></div>
-      <div class="trend-habits">
-        <div class="trend-habit-row">
-          <span class="trend-habit-label">🪔 Guru Pooja</span>
-          <div class="trend-bars" id="bars-guru_pooja"></div>
-        </div>
-        <div class="trend-habit-row">
-          <span class="trend-habit-label">🌀 Upa Yoga</span>
-          <div class="trend-bars" id="bars-upa_yoga"></div>
-        </div>
-        <div class="trend-habit-row">
-          <span class="trend-habit-label">☀️ Surya Kriya</span>
-          <div class="trend-bars" id="bars-surya_kriya"></div>
-        </div>
-        <div class="trend-habit-row">
-          <span class="trend-habit-label">🧘 Yoga Namaskar</span>
-          <div class="trend-bars" id="bars-yoga_namaskar"></div>
-        </div>
-        <div class="trend-habit-row">
-          <span class="trend-habit-label">⚡ SCK</span>
-          <div class="trend-bars" id="bars-sck"></div>
-        </div>
-      </div>
+      <div class="trend-habits" id="sadhana-trend-habits"></div>
     </div>
 
   </section>
@@ -531,48 +438,7 @@
           <svg class="ps-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </div>
-      <div class="ps-body">
-        <div class="habit-card">
-          <span class="habit-icon">🪔</span>
-          <div class="habit-info">
-            <div class="habit-name">Guru Pooja</div>
-            <div class="habit-dots" id="hdots-guru_pooja"></div>
-          </div>
-          <div class="habit-streak-badge" id="hstreak-guru_pooja">🔥 0</div>
-        </div>
-        <div class="habit-card">
-          <span class="habit-icon">🌀</span>
-          <div class="habit-info">
-            <div class="habit-name">Upa Yoga</div>
-            <div class="habit-dots" id="hdots-upa_yoga"></div>
-          </div>
-          <div class="habit-streak-badge" id="hstreak-upa_yoga">🔥 0</div>
-        </div>
-        <div class="habit-card">
-          <span class="habit-icon">☀️</span>
-          <div class="habit-info">
-            <div class="habit-name">Surya Kriya</div>
-            <div class="habit-dots" id="hdots-surya_kriya"></div>
-          </div>
-          <div class="habit-streak-badge" id="hstreak-surya_kriya">🔥 0</div>
-        </div>
-        <div class="habit-card">
-          <span class="habit-icon">🧘</span>
-          <div class="habit-info">
-            <div class="habit-name">Yoga Namaskar</div>
-            <div class="habit-dots" id="hdots-yoga_namaskar"></div>
-          </div>
-          <div class="habit-streak-badge" id="hstreak-yoga_namaskar">🔥 0</div>
-        </div>
-        <div class="habit-card">
-          <span class="habit-icon">⚡</span>
-          <div class="habit-info">
-            <div class="habit-name">SCK</div>
-            <div class="habit-dots" id="hdots-sck"></div>
-          </div>
-          <div class="habit-streak-badge" id="hstreak-sck">🔥 0</div>
-        </div>
-      </div>
+      <div class="ps-body" id="ps-sadhana-body"></div>
     </div>
 
     <!-- Reading Section -->

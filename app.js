@@ -30,6 +30,27 @@ let currentDate = todayStr();
 let data        = {};        // in-memory cache: { [dateStr]: dayObject }
 let saveTimer   = null;      // debounce handle for Firestore writes
 
+const DEFAULT_SADHANA_PRACTICES = [
+  { id: 'guru_pooja',          name: 'Guru Pooja',                      icon: '🪔', desc: 'Daily reverence & offering' },
+  { id: 'upa_yoga',            name: 'Upa Yoga',                        icon: '🌀', desc: 'Activating the system' },
+  { id: 'yoga_namaskar',       name: 'Yoga Namaskar',                   icon: '🧘', desc: 'Salutation to the sun' },
+  { id: 'surya_kriya',         name: 'Surya Kriya',                     icon: '☀️', desc: 'Solar energy alignment' },
+  { id: 'asanas',              name: 'Asanas',                          icon: '🤸', desc: 'Physical postures' },
+  { id: 'sck_morning',         name: 'Shakti Chalana Kriya (Morning)',  icon: '⚡', desc: 'Morning energy activation' },
+  { id: 'shambhavi_morning',   name: 'Shambhavi (Morning)',             icon: '🌅', desc: 'Morning inner vision practice' },
+  { id: 'shoonya_mid',         name: 'Shoonya (Mid Morning)',           icon: '🌌', desc: 'Emptiness meditation' },
+  { id: 'miracle_of_mind',     name: 'Miracle of Mind',                 icon: '🧠', desc: 'Mind training practice' },
+  { id: 'devi_stuti',          name: 'Devi Stuti',                      icon: '🌸', desc: 'Devotional chanting' },
+  { id: 'achala_arpanam',      name: 'Achala Arpanam',                  icon: '🏔️', desc: 'Offering to the stillness' },
+  { id: 'infinity_meditation', name: 'Infinity Meditation',             icon: '♾️', desc: 'Boundless awareness' },
+  { id: 'sukha_kriya',         name: 'Sukha Kriya',                     icon: '😌', desc: 'Effortless action' },
+  { id: 'aum_chanting',        name: 'Aum Chanting',                    icon: '🔔', desc: 'Sacred sound vibration' },
+  { id: 'nadi_shuddhi',        name: 'Nadi Shuddhi',                    icon: '🌬️', desc: 'Energy channel purification' },
+  { id: 'shoonya_evening',     name: 'Shoonya (Evening)',               icon: '🌙', desc: 'Evening emptiness meditation' },
+  { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: 'Evening energy activation' },
+  { id: 'shambhavi_evening',   name: 'Shambhavi (Evening)',             icon: '🌅', desc: 'Evening inner vision practice' },
+];
+
 let mealOptions = {
   breakfast: ['Oats & Banana', 'Poha', 'Idli & Sambar', 'Dosa', 'Paratha', 'Bread & Eggs'],
   lunch:     ['Rice & Dal', 'Roti & Sabzi', 'Salad Bowl', 'Pulao', 'Biryani'],
@@ -110,10 +131,7 @@ function defaultDay() {
       breakfast: '', lunch: '', snack: '', dinner: '',
       customHabits: {}
     },
-    sadhana: {
-      guru_pooja: false, upa_yoga: false,
-      surya_kriya: false, yoga_namaskar: false, sck: false
-    },
+    sadhana: Object.fromEntries(DEFAULT_SADHANA_PRACTICES.map(p => [p.id, false])),
     t: {},
     plan: { breakfast: '', lunch: '', snack: '', dinner: '' },
     reading: { did_read: false, book_title: '', author: '', pages_read: 0, duration_mins: 0, notes: '' },
@@ -677,6 +695,35 @@ function setVal(id, val) {
   if (el) el.value = val || '';
 }
 
+/* ── RENDER — SADHANA UI (once on init) ─────────────────── */
+function renderSadhanaUI() {
+  const practiceList = document.getElementById('practiceList');
+  if (practiceList) {
+    practiceList.innerHTML = DEFAULT_SADHANA_PRACTICES.map(p => `
+      <div class="practice-item" data-practice="${p.id}">
+        <div class="practice-info">
+          <span class="practice-icon">${p.icon}</span>
+          <div>
+            <div class="practice-name">${p.name}</div>
+            <div class="practice-desc">${p.desc}</div>
+          </div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" class="sadhana-check" data-field="${p.id}">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>`).join('');
+  }
+  const trendHabits = document.getElementById('sadhana-trend-habits');
+  if (trendHabits) {
+    trendHabits.innerHTML = DEFAULT_SADHANA_PRACTICES.map(p => `
+      <div class="trend-habit-row">
+        <span class="trend-habit-label">${p.icon} ${p.name}</span>
+        <div class="trend-bars" id="bars-${p.id}"></div>
+      </div>`).join('');
+  }
+}
+
 /* ── RENDER — SADHANA FORM ──────────────────────────────── */
 function renderSadhana() {
   const s = getDayData(currentDate).sadhana;
@@ -688,7 +735,7 @@ function renderSadhana() {
 
 function updateSadhanaBanner() {
   const s   = getDayData(currentDate).sadhana;
-  const all = Object.values(s).every(Boolean);
+  const all = DEFAULT_SADHANA_PRACTICES.every(p => s[p.id]);
   document.getElementById('sadhanaBanner').style.display = all ? 'block' : 'none';
 }
 
@@ -775,8 +822,6 @@ function renderPlanner() {
     { key: 'meals',    check: d => !!(data[d]?.health?.breakfast || data[d]?.health?.lunch || data[d]?.health?.dinner) }
   ];
 
-  const SADHANA_PRACTICES = ['guru_pooja', 'upa_yoga', 'surya_kriya', 'yoga_namaskar', 'sck'];
-
   HEALTH_HABITS.forEach(({ key, check }) => {
     setHabitCard(key, calcHabitStreak(check), getLast7Dots(check));
   });
@@ -788,9 +833,22 @@ function renderPlanner() {
   const psh = document.getElementById('pstreak-health');
   if (psh) psh.textContent = healthSectionStreak > 0 ? `🔥 ${healthSectionStreak}` : '';
 
-  SADHANA_PRACTICES.forEach(p => {
-    const check = d => !!(data[d]?.sadhana?.[p]);
-    setHabitCard(p, calcHabitStreak(check), getLast7Dots(check));
+  const psSadhanaBody = document.getElementById('ps-sadhana-body');
+  if (psSadhanaBody && !psSadhanaBody.dataset.rendered) {
+    psSadhanaBody.innerHTML = DEFAULT_SADHANA_PRACTICES.map(p => `
+      <div class="habit-card">
+        <span class="habit-icon">${p.icon}</span>
+        <div class="habit-info">
+          <div class="habit-name">${p.name}</div>
+          <div class="habit-dots" id="hdots-${p.id}"></div>
+        </div>
+        <div class="habit-streak-badge" id="hstreak-${p.id}">—</div>
+      </div>`).join('');
+    psSadhanaBody.dataset.rendered = '1';
+  }
+  DEFAULT_SADHANA_PRACTICES.forEach(p => {
+    const check = d => !!(data[d]?.sadhana?.[p.id]);
+    setHabitCard(p.id, calcHabitStreak(check), getLast7Dots(check));
   });
 
   const sadhanaSectionStreak = calcHabitStreak(d => {
@@ -1247,11 +1305,24 @@ function parseTrackerEntry(text, date) {
 
   // Sadhana practices (keyword match)
   const SADHANA_MAP = {
-    surya_kriya:    /surya kriya|surya-kriya/,
-    guru_pooja:     /guru pooja|guru-pooja/,
-    upa_yoga:       /upa yoga|upa-yoga/,
-    yoga_namaskar:  /yoga namaskar|yoga-namaskar/,
-    sck:            /\bsck\b|shakti chalana/
+    guru_pooja:          /guru pooja|guru-pooja/,
+    upa_yoga:            /upa yoga|upa-yoga/,
+    yoga_namaskar:       /yoga namaskar|yoga-namaskar/,
+    surya_kriya:         /surya kriya|surya-kriya/,
+    asanas:              /\basanas?\b/,
+    sck_morning:         /sck morning|morning sck|shakti chalana.*morning|morning.*shakti chalana/,
+    shambhavi_morning:   /shambhavi.*morning|morning.*shambhavi/,
+    shoonya_mid:         /shoonya.*mid|mid.*shoonya/,
+    miracle_of_mind:     /miracle of mind/,
+    devi_stuti:          /devi stuti/,
+    achala_arpanam:      /achala arpanam/,
+    infinity_meditation: /infinity meditation/,
+    sukha_kriya:         /sukha kriya/,
+    aum_chanting:        /aum chanting|\baum\b/,
+    nadi_shuddhi:        /nadi shuddhi/,
+    shoonya_evening:     /shoonya.*evening|evening.*shoonya/,
+    sck_evening:         /sck evening|evening sck|shakti chalana.*evening|evening.*shakti chalana/,
+    shambhavi_evening:   /shambhavi.*evening|evening.*shambhavi/,
   };
   Object.entries(SADHANA_MAP).forEach(([k, rx]) => {
     if (rx.test(lower) && !d.sadhana[k]) { d.sadhana[k] = true; changed = true; }
@@ -1304,11 +1375,9 @@ function renderPendingHabits() {
   if (!h.breakfast) items.push({ label: '🌅 Breakfast', tab: 'health' });
   if (!h.lunch)     items.push({ label: '☀️ Lunch', tab: 'health' });
   if (!h.dinner)    items.push({ label: '🌙 Dinner', tab: 'health' });
-  if (!s.guru_pooja)    items.push({ label: '🪔 Guru Pooja', tab: 'sadhana' });
-  if (!s.surya_kriya)   items.push({ label: '☀️ Surya Kriya', tab: 'sadhana' });
-  if (!s.yoga_namaskar) items.push({ label: '🧘 Yoga Namaskar', tab: 'sadhana' });
-  if (!s.upa_yoga)      items.push({ label: '🌀 Upa Yoga', tab: 'sadhana' });
-  if (!s.sck)           items.push({ label: '⚡ SCK', tab: 'sadhana' });
+  DEFAULT_SADHANA_PRACTICES.forEach(p => {
+    if (!s[p.id]) items.push({ label: `${p.icon} ${p.name}`, tab: 'sadhana' });
+  });
   if (!r.did_read) items.push({ label: '📚 Reading', tab: 'reading' });
 
   // Custom health habits
@@ -1561,7 +1630,6 @@ function renderTrendBars(containerId, checker, color) {
 }
 
 function renderTrends() {
-  const SADHANA_PRACTICES = ['guru_pooja', 'upa_yoga', 'surya_kriya', 'yoga_namaskar', 'sck'];
 
   renderHeatmap('heatmap-health', d => {
     const h = data[d]?.health || {};
@@ -1579,10 +1647,10 @@ function renderTrends() {
 
   renderHeatmap('heatmap-sadhana', d => {
     const s = data[d]?.sadhana || {};
-    return SADHANA_PRACTICES.filter(p => s[p]).length / SADHANA_PRACTICES.length;
+    return DEFAULT_SADHANA_PRACTICES.filter(p => s[p.id]).length / DEFAULT_SADHANA_PRACTICES.length;
   }, 'var(--sadhana)');
-  SADHANA_PRACTICES.forEach(p =>
-    renderTrendBars(`bars-${p}`, d => !!(data[d]?.sadhana?.[p]), 'var(--sadhana)')
+  DEFAULT_SADHANA_PRACTICES.forEach(p =>
+    renderTrendBars(`bars-${p.id}`, d => !!(data[d]?.sadhana?.[p.id]), 'var(--sadhana)')
   );
 
   renderHeatmap('heatmap-reading', d => data[d]?.reading?.did_read ? 1 : 0, 'var(--reading)');
@@ -1743,15 +1811,10 @@ function buildHealthRow(dateStr, h) {
 }
 
 function buildSadhanaRow(dateStr, s) {
-  return {
-    'Date': dateStr, 'Day': DAY_NAMES[dateObj(dateStr).getDay()],
-    'Guru Pooja': s.guru_pooja    ? 'Yes' : 'No',
-    'Upa Yoga':   s.upa_yoga      ? 'Yes' : 'No',
-    'Surya Kriya': s.surya_kriya  ? 'Yes' : 'No',
-    'Yoga Namaskar': s.yoga_namaskar ? 'Yes' : 'No',
-    'SCK': s.sck                  ? 'Yes' : 'No',
-    'Total Done': Object.values(s).filter(Boolean).length
-  };
+  const row = { 'Date': dateStr, 'Day': DAY_NAMES[dateObj(dateStr).getDay()] };
+  DEFAULT_SADHANA_PRACTICES.forEach(p => { row[p.name] = s[p.id] ? 'Yes' : 'No'; });
+  row['Total Done'] = DEFAULT_SADHANA_PRACTICES.filter(p => s[p.id]).length;
+  return row;
 }
 
 function updateExportSummary() {
@@ -2097,7 +2160,8 @@ function init() {
     if (currentDate < todayStr()) navigateTo(offsetDate(currentDate, 1));
   });
 
-  /* Health & Sadhana events */
+  /* Sadhana UI & events */
+  renderSadhanaUI();
   initHealthContainerEvents();
   initSadhanaEvents();
 

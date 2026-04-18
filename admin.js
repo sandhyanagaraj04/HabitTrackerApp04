@@ -83,7 +83,7 @@ function computeAnalytics(users) {
   const weekAgo = offsetDate(today, -7);
 
   let totalSleepHrs = [], totalSteps = [], totalSadhana = [];
-  let sadhanaFields = { guru_pooja:0, upa_yoga:0, surya_kriya:0, yoga_namaskar:0, sck:0 };
+  let sadhanaFields = { guru_pooja:0, upa_yoga:0, yoga_namaskar:0, surya_kriya:0, asanas:0, sck_morning:0, shambhavi_morning:0, shoonya_mid:0, miracle_of_mind:0, devi_stuti:0, achala_arpanam:0, infinity_meditation:0, sukha_kriya:0, aum_chanting:0, nadi_shuddhi:0, shoonya_evening:0, sck_evening:0, shambhavi_evening:0 };
   let sadhanaTotal  = 0;
   let qualityCounts = [0,0,0,0,0]; // indices 0-4 = stars 1-5
   let mealSources   = { home:0, outside:0, ordered:0, canteen:0, skipped:0 };
@@ -224,8 +224,8 @@ function renderCharts(a) {
   charts = {};
 
   // Sadhana horizontal bar
-  const sadhanaLabels = ['Guru Pooja','Upa Yoga','Surya Kriya','Yoga Namaskar','SCK'];
-  const sadhanaKeys   = ['guru_pooja','upa_yoga','surya_kriya','yoga_namaskar','sck'];
+  const sadhanaLabels = ['Guru Pooja','Upa Yoga','Yoga Namaskar','Surya Kriya','Asanas','SCK (Morning)','Shambhavi (Morning)','Shoonya (Mid)','Miracle of Mind','Devi Stuti','Achala Arpanam','Infinity Meditation','Sukha Kriya','Aum Chanting','Nadi Shuddhi','Shoonya (Evening)','SCK (Evening)','Shambhavi (Evening)'];
+  const sadhanaKeys   = ['guru_pooja','upa_yoga','yoga_namaskar','surya_kriya','asanas','sck_morning','shambhavi_morning','shoonya_mid','miracle_of_mind','devi_stuti','achala_arpanam','infinity_meditation','sukha_kriya','aum_chanting','nadi_shuddhi','shoonya_evening','sck_evening','shambhavi_evening'];
   charts.sadhana = makeChart('sadhanaChart', 'bar', {
     labels: sadhanaLabels,
     datasets: [{ data: sadhanaKeys.map(k => a.sadhanaCompletionPct[k]),
