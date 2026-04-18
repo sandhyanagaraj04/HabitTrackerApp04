@@ -626,27 +626,56 @@
   <!-- ── MEAL PLANNER TAB ───────────────────────────── -->
   <section class="tab-section" id="tab-meal">
 
-    <div class="card card-meal">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="card-emoji">🥗</span>
-          <h2 class="card-title">Meal Planner</h2>
-        </div>
+    <div class="mp-header">
+      <div class="mp-title-row">
+        <span class="card-emoji">🥗</span>
+        <h2 class="card-title">Meal Planner</h2>
       </div>
-      <div class="card-body">
+      <div class="mp-inner-tabs">
+        <button class="mp-itab active" data-mptab="plan">📅 Meal Plan</button>
+        <button class="mp-itab" data-mptab="recipes">📖 Recipes</button>
+        <button class="mp-itab" data-mptab="shopping">🛒 Shopping</button>
+      </div>
+    </div>
 
-        <div class="mp-week-nav">
-          <button class="date-arrow" id="mpPrevWeek">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <span class="mp-week-label" id="mpWeekLabel">Loading…</span>
-          <button class="date-arrow" id="mpNextWeek">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
+    <!-- ── Meal Plan Panel ── -->
+    <div class="mp-panel" id="mpp-plan">
+      <div class="mp-week-nav">
+        <button class="date-arrow" id="mpPrevWeek">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <span class="mp-week-label" id="mpWeekLabel">Loading…</span>
+        <button class="date-arrow" id="mpNextWeek">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div id="mpDays"></div>
+    </div>
+
+    <!-- ── Recipes Panel ── -->
+    <div class="mp-panel" id="mpp-recipes" style="display:none">
+      <div class="mp-recipes-toolbar">
+        <p class="mp-recipes-hint">Recipes you add here will appear as options in the Meal Plan and link their ingredients to your Shopping List.</p>
+        <button class="mp-action-btn" id="addRecipeBtn">＋ Add Recipe</button>
+      </div>
+      <div id="mpRecipeList"></div>
+    </div>
+
+    <!-- ── Shopping List Panel ── -->
+    <div class="mp-panel" id="mpp-shopping" style="display:none">
+      <div class="mp-shopping-header">
+        <div class="mp-shopping-week-label" id="mpShoppingWeek"></div>
+        <button class="mp-action-btn mp-btn-clear" id="clearShoppingBtn">Clear checked</button>
+      </div>
+      <div class="mp-shopping-layout">
+        <div class="mp-shopping-col">
+          <div class="mp-shopping-col-title">📋 Ingredients needed</div>
+          <div id="mpIngredientsList"></div>
         </div>
-
-        <div id="mpDays"></div>
-
+        <div class="mp-shopping-col mp-shopping-col-right">
+          <div class="mp-shopping-col-title">🛒 Need to buy</div>
+          <div id="mpBuyList"></div>
+        </div>
       </div>
     </div>
 
@@ -896,14 +925,35 @@
   </div>
 </div>
 
-<!-- ── ADD MEAL OPTION MODAL ───────────────────────────── -->
-<div class="add-option-overlay" id="addOptionOverlay" style="display:none">
-  <div class="add-option-card">
-    <h3 class="add-option-title">Add <span id="addOptionMealType">Breakfast</span> option</h3>
-    <input type="text" class="input-text" id="addOptionInput" placeholder="e.g. Oats with banana..." maxlength="80">
-    <div class="add-option-actions">
-      <button class="modal-btn modal-btn-cancel" id="addOptionCancel">Cancel</button>
-      <button class="modal-btn modal-btn-confirm" id="addOptionConfirm">Add</button>
+<!-- ── RECIPE ADD/EDIT MODAL ────────────────────────────── -->
+<div class="modal-overlay" id="recipeModal" style="display:none">
+  <div class="modal recipe-modal">
+    <h2 class="modal-title" id="recipeModalTitle">Add Recipe</h2>
+
+    <div class="field">
+      <label class="field-label">Recipe Name</label>
+      <input type="text" class="input-text" id="recipeName" placeholder="e.g. Oats & Banana" maxlength="60">
+    </div>
+
+    <div class="field">
+      <label class="field-label">Meal Type (optional)</label>
+      <div class="recipe-meal-type-row">
+        <label class="recipe-type-check"><input type="checkbox" class="recipe-type-cb" value="breakfast"> Breakfast</label>
+        <label class="recipe-type-check"><input type="checkbox" class="recipe-type-cb" value="lunch"> Lunch</label>
+        <label class="recipe-type-check"><input type="checkbox" class="recipe-type-cb" value="snack"> Snack</label>
+        <label class="recipe-type-check"><input type="checkbox" class="recipe-type-cb" value="dinner"> Dinner</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Ingredients</label>
+      <div id="recipeIngredientRows"></div>
+      <button class="mp-add-ing-btn" id="addIngredientRowBtn">＋ Add ingredient</button>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="modal-btn modal-btn-cancel" id="recipeCancelBtn" style="flex:1">Cancel</button>
+      <button class="modal-btn modal-btn-confirm" id="recipeSaveBtn" style="flex:1">Save</button>
     </div>
   </div>
 </div>
