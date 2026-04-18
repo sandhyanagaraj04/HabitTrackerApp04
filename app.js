@@ -638,28 +638,6 @@ function init() {
   );
   setQuickRange(7);
 
-  /* Clear all */
-  document.getElementById('clearAllBtn').addEventListener('click', () => {
-    showConfirm(
-      'Clear all data?',
-      'This will permanently delete all your habit data. This cannot be undone.',
-      async () => {
-        if (!currentUser) return;
-        if (!FIREBASE_CONFIGURED) {
-          localStorage.removeItem('habitTracker_v1');
-        } else {
-          const snap = await db.collection('users').doc(currentUser.uid).collection('days').get();
-          const batch = db.batch();
-          snap.forEach(doc => batch.delete(doc.ref));
-          await batch.commit();
-        }
-        data = {};
-        renderAll();
-        showToast('🗑️ All data cleared');
-      },
-      'Clear all'
-    );
-  });
 
   /* Confirm modal */
   document.getElementById('confirmCancel').addEventListener('click', hideConfirm);
