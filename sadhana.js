@@ -192,6 +192,13 @@ function renderAnalytics() {
   function daysRange(n, offset = 0) {
     return Array.from({ length: n }, (_, i) => offsetDate(today, -(i + offset)));
   }
+  function fmtShort(d) {
+    const dt = new Date(d + 'T00:00:00');
+    return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+  const labelToday = `(${fmtShort(today)})`;
+  const labelWeek  = `(${fmtShort(offsetDate(today, -6))} – ${fmtShort(today)})`;
+  const labelMonth = `(${fmtShort(offsetDate(today, -29))} – ${fmtShort(today)})`;
   function avg(vals) {
     const v = vals.filter(x => x > 0);
     return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
@@ -255,18 +262,18 @@ function renderAnalytics() {
     <div class="analytics-section">
       <div class="analytics-section-title">⏱️ Total Practice Time</div>
       <div class="analytics-grid">
-        <div class="stat-card"><div class="stat-value">${fmt(totalToday, 'min')}</div><div class="stat-label">Today</div></div>
-        <div class="stat-card"><div class="stat-value">${fmt(Math.round(avgWeekMins), 'min')}</div><div class="stat-label">Avg — past week</div></div>
-        <div class="stat-card"><div class="stat-value">${fmt(Math.round(avgMonthMins), 'min')}</div><div class="stat-label">Avg — past month</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(totalToday, 'min')}</div><div class="stat-label">Today<br><span class="stat-date">${labelToday}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(avgWeekMins), 'min')}</div><div class="stat-label">Avg — past week<br><span class="stat-date">${labelWeek}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(avgMonthMins), 'min')}</div><div class="stat-label">Avg — past month<br><span class="stat-date">${labelMonth}</span></div></div>
       </div>
     </div>
 
     <div class="analytics-section">
       <div class="analytics-section-title">☀️ Surya Kriya</div>
       <div class="analytics-grid">
-        <div class="stat-card"><div class="stat-value">${fmt(suryaCyclesToday)}</div><div class="stat-label">Cycles today</div></div>
-        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(suryaAvgCyclesWeek.toFixed(1)))}</div><div class="stat-label">Avg cycles — week</div></div>
-        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(suryaAvgCyclesMonth.toFixed(1)))}</div><div class="stat-label">Avg cycles — month</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(suryaCyclesToday)}</div><div class="stat-label">Cycles today<br><span class="stat-date">${labelToday}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(suryaAvgCyclesWeek.toFixed(1)))}</div><div class="stat-label">Avg cycles — week<br><span class="stat-date">${labelWeek}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(suryaAvgCyclesMonth.toFixed(1)))}</div><div class="stat-label">Avg cycles — month<br><span class="stat-date">${labelMonth}</span></div></div>
       </div>
       <div class="analytics-improvement">
         <span class="improvement-label">Time per cycle vs last week</span>
@@ -277,9 +284,9 @@ function renderAnalytics() {
     <div class="analytics-section">
       <div class="analytics-section-title">⚡ Shakti Chalana Kriya</div>
       <div class="analytics-grid">
-        <div class="stat-card"><div class="stat-value">${fmt(sckToday)}</div><div class="stat-label">Kapalabhatis today</div></div>
-        <div class="stat-card"><div class="stat-value">${fmt(Math.round(sckAvgThis))}</div><div class="stat-label">Avg — past week</div></div>
-        <div class="stat-card"><div class="stat-value">${fmt(Math.round(avg(daysRange(30).map(sckVal))))}</div><div class="stat-label">Avg — past month</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(sckToday)}</div><div class="stat-label">Kapalabhatis today<br><span class="stat-date">${labelToday}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(sckAvgThis))}</div><div class="stat-label">Avg — past week<br><span class="stat-date">${labelWeek}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(avg(daysRange(30).map(sckVal))))}</div><div class="stat-label">Avg — past month<br><span class="stat-date">${labelMonth}</span></div></div>
       </div>
       <div class="analytics-improvement">
         <span class="improvement-label">Kapalabhatis/cycle vs last week</span>
@@ -290,18 +297,18 @@ function renderAnalytics() {
     <div class="analytics-section">
       <div class="analytics-section-title">🧠 Miracle of Mind</div>
       <div class="analytics-grid">
-        <div class="stat-card"><div class="stat-value">${fmt(momToday, 'min')}</div><div class="stat-label">Today</div></div>
-        <div class="stat-card"><div class="stat-value">${fmt(Math.round(momAvgWeek), 'min')}</div><div class="stat-label">Avg — past week</div></div>
-        <div class="stat-card"><div class="stat-value">${fmt(Math.round(momAvgMonth), 'min')}</div><div class="stat-label">Avg — past month</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(momToday, 'min')}</div><div class="stat-label">Today<br><span class="stat-date">${labelToday}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(momAvgWeek), 'min')}</div><div class="stat-label">Avg — past week<br><span class="stat-date">${labelWeek}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(momAvgMonth), 'min')}</div><div class="stat-label">Avg — past month<br><span class="stat-date">${labelMonth}</span></div></div>
       </div>
     </div>
 
     <div class="analytics-section">
       <div class="analytics-section-title">🌸 Devi Stuti</div>
       <div class="analytics-grid">
-        <div class="stat-card"><div class="stat-value">${fmt(deviToday)}</div><div class="stat-label">Cycles today</div></div>
-        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(deviAvgWeek.toFixed(1)))}</div><div class="stat-label">Avg — past week</div></div>
-        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(deviAvgMonth.toFixed(1)))}</div><div class="stat-label">Avg — past month</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(deviToday)}</div><div class="stat-label">Cycles today<br><span class="stat-date">${labelToday}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(deviAvgWeek.toFixed(1)))}</div><div class="stat-label">Avg — past week<br><span class="stat-date">${labelWeek}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(deviAvgMonth.toFixed(1)))}</div><div class="stat-label">Avg — past month<br><span class="stat-date">${labelMonth}</span></div></div>
       </div>
     </div>
   `;
