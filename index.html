@@ -128,230 +128,7 @@
   <!-- ── HEALTH TAB ──────────────────────────────────── -->
   <section class="tab-section active" id="tab-health">
 
-    <!-- Sleep Card -->
-    <div class="card card-health">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="card-emoji">😴</span>
-          <h2 class="card-title">Sleep</h2>
-        </div>
-        <div class="card-progress-ring">
-          <svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-fill ring-health" id="sleepRing" cx="18" cy="18" r="15.9" stroke-dasharray="0 100"/></svg>
-          <span id="sleepPct">0%</span>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="field-row">
-          <div class="field">
-            <label class="field-label">Sleeping Time</label>
-            <input type="time" class="input-time" id="sleepTime" data-field="sleep_time">
-          </div>
-          <div class="field">
-            <label class="field-label">Waking Time</label>
-            <input type="time" class="input-time" id="wakeTime" data-field="wake_time">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label class="field-label">Hours of Sleep</label>
-            <div class="computed-display" id="sleepHours">
-              <span class="computed-value">—</span>
-              <span class="computed-unit">hrs</span>
-            </div>
-          </div>
-          <div class="field">
-            <label class="field-label">Sleep Quality</label>
-            <div class="star-rating" id="sleepQuality" data-field="sleep_quality">
-              <span class="star" data-val="1">★</span>
-              <span class="star" data-val="2">★</span>
-              <span class="star" data-val="3">★</span>
-              <span class="star" data-val="4">★</span>
-              <span class="star" data-val="5">★</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Phone Greyscale Card -->
-    <div class="card card-health">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="card-emoji">📱</span>
-          <h2 class="card-title">Phone</h2>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="field-row">
-          <div class="field">
-            <label class="field-label">Greyscale On At</label>
-            <input type="time" class="input-time" id="greyscaleOn" data-field="greyscale_on">
-          </div>
-          <div class="field">
-            <label class="field-label">Greyscale Hours</label>
-            <div class="computed-display" id="greyscaleHours">
-              <span class="computed-value">—</span>
-              <span class="computed-unit">hrs</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Activity Card -->
-    <div class="card card-health">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="card-emoji">🏃</span>
-          <h2 class="card-title">Activity</h2>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="field-row">
-          <div class="field">
-            <label class="field-label">Steps</label>
-            <div class="number-input-group">
-              <button class="num-btn" data-target="stepsInput" data-delta="-500">−</button>
-              <input type="number" class="input-number" id="stepsInput" data-field="steps" placeholder="0" min="0">
-              <button class="num-btn" data-target="stepsInput" data-delta="500">+</button>
-            </div>
-          </div>
-          <div class="field">
-            <label class="field-label">Heart Points</label>
-            <div class="number-input-group">
-              <button class="num-btn" data-target="heartInput" data-delta="-5">−</button>
-              <input type="number" class="input-number" id="heartInput" data-field="heart_points" placeholder="0" min="0">
-              <button class="num-btn" data-target="heartInput" data-delta="5">+</button>
-            </div>
-          </div>
-        </div>
-        <!-- Steps Progress Bar -->
-        <div class="progress-bar-wrap">
-          <div class="progress-bar-label">
-            <span>Steps Goal (10,000)</span>
-            <span id="stepsGoalPct">0%</span>
-          </div>
-          <div class="progress-bar"><div class="progress-fill progress-health" id="stepsBar" style="width:0%"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Meals Card -->
-    <div class="card card-health">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="card-emoji">🍽️</span>
-          <h2 class="card-title">Meals</h2>
-        </div>
-      </div>
-      <div class="card-body">
-
-        <div class="meal-block">
-          <div class="meal-header">
-            <span class="meal-icon">🌅</span>
-            <span class="meal-name">Breakfast</span>
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label class="field-label">Source</label>
-              <select class="input-select" data-field="breakfast_source">
-                <option value="">— Select —</option>
-                <option value="home">🏠 Home</option>
-                <option value="outside">🏪 Outside</option>
-                <option value="ordered">📦 Ordered In</option>
-                <option value="canteen">🏢 Canteen</option>
-                <option value="skipped">⏭️ Skipped</option>
-              </select>
-            </div>
-          </div>
-          <div class="field">
-            <label class="field-label">What did you eat?</label>
-            <input type="text" class="input-text" data-field="breakfast" placeholder="e.g. Oats with banana...">
-          </div>
-        </div>
-
-        <div class="meal-divider"></div>
-
-        <div class="meal-block">
-          <div class="meal-header">
-            <span class="meal-icon">☀️</span>
-            <span class="meal-name">Lunch</span>
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label class="field-label">Source</label>
-              <select class="input-select" data-field="lunch_source">
-                <option value="">— Select —</option>
-                <option value="home">🏠 Home</option>
-                <option value="outside">🏪 Outside</option>
-                <option value="ordered">📦 Ordered In</option>
-                <option value="canteen">🏢 Canteen</option>
-                <option value="skipped">⏭️ Skipped</option>
-              </select>
-            </div>
-          </div>
-          <div class="field">
-            <label class="field-label">What did you eat?</label>
-            <input type="text" class="input-text" data-field="lunch" placeholder="e.g. Rice and dal...">
-          </div>
-        </div>
-
-        <div class="meal-divider"></div>
-
-        <div class="meal-block">
-          <div class="meal-header">
-            <span class="meal-icon">🌤️</span>
-            <span class="meal-name">Snack</span>
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label class="field-label">Source</label>
-              <select class="input-select" data-field="snack_source">
-                <option value="">— Select —</option>
-                <option value="home">🏠 Home</option>
-                <option value="outside">🏪 Outside</option>
-                <option value="ordered">📦 Ordered In</option>
-                <option value="canteen">🏢 Canteen</option>
-                <option value="skipped">⏭️ Skipped</option>
-              </select>
-            </div>
-          </div>
-          <div class="field">
-            <label class="field-label">What did you eat?</label>
-            <input type="text" class="input-text" data-field="snack" placeholder="e.g. Fruits, nuts...">
-          </div>
-        </div>
-
-        <div class="meal-divider"></div>
-
-        <div class="meal-block">
-          <div class="meal-header">
-            <span class="meal-icon">🌙</span>
-            <span class="meal-name">Dinner</span>
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label class="field-label">Source</label>
-              <select class="input-select" data-field="dinner_source">
-                <option value="">— Select —</option>
-                <option value="home">🏠 Home</option>
-                <option value="outside">🏪 Outside</option>
-                <option value="ordered">📦 Ordered In</option>
-                <option value="canteen">🏢 Canteen</option>
-                <option value="skipped">⏭️ Skipped</option>
-              </select>
-            </div>
-          </div>
-          <div class="field">
-            <label class="field-label">What did you eat?</label>
-            <input type="text" class="input-text" data-field="dinner" placeholder="e.g. Roti and vegetables...">
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Health Trends -->
+    <!-- 3-Month Trends at top -->
     <div class="trends-card card-health">
       <div class="trends-header">
         <span class="trends-title">3-Month Trends</span>
@@ -378,9 +155,27 @@
       </div>
     </div>
 
+    <!-- Overall progress + Add/Edit buttons -->
+    <div class="hs-overview">
+      <div class="hs-overview-left">
+        <span class="card-emoji">💚</span>
+        <h2 class="hs-section-title">Health Habits</h2>
+      </div>
+      <div class="hs-overview-right">
+        <div class="card-progress-ring">
+          <svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-fill ring-health" id="sleepRing" cx="18" cy="18" r="15.9" stroke-dasharray="0 100"/></svg>
+          <span id="sleepPct">0%</span>
+        </div>
+        <button class="hs-add-btn" id="addHealthHabitBtn">＋ Add habit</button>
+      </div>
+    </div>
+
+    <!-- Collapsible habit sections — generated by JS -->
+    <div id="healthHabitsContainer"></div>
+
   </section>
 
-  <!-- ── SADHANA TAB ─────────────────────────────────── -->
+    <!-- ── SADHANA TAB ─────────────────────────────────── -->
   <section class="tab-section" id="tab-sadhana">
 
     <div class="card card-sadhana">
@@ -1109,6 +904,25 @@
     <div class="add-option-actions">
       <button class="modal-btn modal-btn-cancel" id="addOptionCancel">Cancel</button>
       <button class="modal-btn modal-btn-confirm" id="addOptionConfirm">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── HEALTH HABIT ADD/EDIT MODAL ─────────────────────── -->
+<div class="modal-overlay" id="healthHabitModal" style="display:none">
+  <div class="modal" style="max-width:360px;padding:28px">
+    <h2 class="modal-title" id="hhModalTitle" style="margin-bottom:18px;font-size:17px">Add Habit</h2>
+    <div class="field" style="margin-bottom:14px">
+      <label class="field-label">Icon (emoji)</label>
+      <input type="text" class="input-text" id="hhIcon" placeholder="e.g. 🏃" maxlength="4" style="font-size:22px;text-align:center;letter-spacing:4px">
+    </div>
+    <div class="field" style="margin-bottom:20px">
+      <label class="field-label">Habit Name</label>
+      <input type="text" class="input-text" id="hhName" placeholder="e.g. Meditation" maxlength="40">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="modal-btn modal-btn-cancel" id="hhCancel" style="flex:1">Cancel</button>
+      <button class="modal-btn modal-btn-confirm" id="hhSave" style="flex:1">Save</button>
     </div>
   </div>
 </div>

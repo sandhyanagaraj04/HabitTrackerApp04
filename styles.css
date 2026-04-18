@@ -2651,3 +2651,142 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
   font-size: 13px;
 }
 .nav-add-section:hover { border-color: var(--border-h); color: var(--text); background: var(--surface); }
+
+/* ── HEALTH HABITS — COLLAPSIBLE SECTIONS ─────────────────── */
+.hs-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 10px;
+  gap: 12px;
+}
+.hs-overview-left { display: flex; align-items: center; gap: 8px; }
+.hs-overview-right { display: flex; align-items: center; gap: 10px; }
+.hs-section-title { font-size: 17px; font-weight: 600; color: var(--text); }
+.hs-add-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(74,222,128,0.35);
+  background: rgba(74,222,128,0.08);
+  color: var(--t, #4ade80);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.hs-add-btn:hover { background: rgba(74,222,128,0.16); }
+
+.hs-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.hs-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.hs-header:hover { background: rgba(255,255,255,0.04); }
+.hs-chevron { font-size: 10px; color: var(--text-dim); flex-shrink: 0; width: 12px; }
+.hs-icon { font-size: 18px; flex-shrink: 0; }
+.hs-name { font-size: 14px; font-weight: 600; color: var(--text); flex-shrink: 0; }
+.hs-status {
+  font-size: 12px;
+  color: var(--text-dim);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: 4px;
+}
+.hs-header-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.hs-edit-btn, .hs-delete-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  transition: opacity 0.15s, background 0.15s;
+}
+.hs-edit-btn:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+.hs-delete-btn:hover { opacity: 1; background: rgba(239,68,68,0.12); }
+
+.hs-body { padding: 4px 14px 16px; }
+.hs-body-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.hs-meals-grid { grid-template-columns: 1fr 1fr; }
+@media (max-width: 480px) {
+  .hs-meals-grid { grid-template-columns: 1fr; }
+}
+.hs-field-group { display: flex; flex-direction: column; gap: 4px; }
+.hs-field-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.hs-input {
+  background: var(--input-bg, rgba(255,255,255,0.06));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 6px 9px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.hs-input:focus { outline: none; border-color: var(--accent, #4ade80); }
+.hs-select {
+  background: var(--input-bg, rgba(255,255,255,0.06));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 6px 9px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.hs-computed {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 6px 0;
+  align-self: flex-end;
+}
+.computed-value { font-size: 22px; font-weight: 700; color: var(--text); }
+.computed-unit { font-size: 12px; color: var(--text-dim); }
+
+.hs-progress-wrap { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
+.hs-progress-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.hs-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent, #4ade80);
+  transition: width 0.3s;
+}
+.hs-progress-label { font-size: 12px; color: var(--text-dim); width: 32px; text-align: right; }
+
+.hs-custom-row { flex-direction: row; align-items: center; }
+.hs-toggle-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text); }
+.hs-checkbox { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent, #4ade80); }

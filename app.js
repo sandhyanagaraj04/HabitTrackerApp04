@@ -39,7 +39,10 @@ let mealOptions = {
 let mealPlanWeekStart  = null;
 let pendingAddMealType = null;
 
-let userSections    = [];    // [{ id, name, icon, type, order, visible }]
+let userSections      = [];   // [{ id, name, icon, type, order, visible }]
+let userHealthHabits  = [];   // [{ id, name, icon, type, order }]
+const healthCollapseState = {}; // { habitId: bool } — false = expanded
+let currentEditHabitId = null;
 let activeRecognition = null; // Web Speech API instance
 
 /* ── UTILITY — DATE ─────────────────────────────────────── */
@@ -101,7 +104,8 @@ function defaultDay() {
       greyscale_on: '',
       steps: '', heart_points: '',
       breakfast_source: '', lunch_source: '', snack_source: '', dinner_source: '',
-      breakfast: '', lunch: '', snack: '', dinner: ''
+      breakfast: '', lunch: '', snack: '', dinner: '',
+      customHabits: {}
     },
     sadhana: {
       guru_pooja: false, upa_yoga: false,
@@ -198,6 +202,9 @@ function healthCompletion(h) {
     h.breakfast_source, h.lunch_source, h.dinner_source,
     h.breakfast, h.lunch, h.dinner
   ];
+  userHealthHabits.filter(habit => habit.type === 'custom').forEach(habit => {
+    fields.push(!!(h.customHabits?.[habit.id]?.done));
+  });
   return Math.round(fields.filter(Boolean).length / fields.length * 100);
 }
 
@@ -293,37 +300,378 @@ function updateRing(ringId, pctId, pct) {
   document.getElementById(pctId).textContent = `${pct}%`;
 }
 
-/* ── RENDER — HEALTH FORM ───────────────────────────────── */
-function renderHealth() {
+/* ── RENDER — HEALTH HABITS ─────────────────────────────── */
+function renderHealth() { renderHealthHabits(); }
+
+/* ── HEALTH HABITS — DATA & RENDERING ───────────────────── */
+const DEFAULT_HEALTH_HABITS = [
+  { id: 'sleep',    name: 'Sleep',       icon: '😴', type: 'builtin', order: 0 },
+  { id: 'phone',    name: 'Phone Usage', icon: '📱', type: 'builtin', order: 1 },
+  { id: 'activity', name: 'Activity',    icon: '🏃', type: 'builtin', order: 2 },
+  { id: 'meals',    name: 'Meals',       icon: '🍽️', type: 'builtin', order: 3 },
+];
+
+async function loadHealthHabits() {
+  if (!currentUser) return;
+  const snap = await db.collection('users').doc(currentUser.uid)
+    .collection('healthHabits').orderBy('order').get();
+  if (snap.empty) {
+    await seedDefaultHealthHabits();
+  } else {
+    userHealthHabits = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+}
+
+async function seedDefaultHealthHabits() {
+  const batch = db.batch();
+  const col = db.collection('users').doc(currentUser.uid).collection('healthHabits');
+  DEFAULT_HEALTH_HABITS.forEach(h => {
+    batch.set(col.doc(h.id), { name: h.name, icon: h.icon, type: h.type, order: h.order });
+  });
+  await batch.commit();
+  userHealthHabits = DEFAULT_HEALTH_HABITS.map(h => ({ ...h }));
+}
+
+async function saveHealthHabit(habit) {
+  await db.collection('users').doc(currentUser.uid)
+    .collection('healthHabits').doc(habit.id).set(
+      { name: habit.name, icon: habit.icon, type: habit.type, order: habit.order }, { merge: true });
+}
+
+async function deleteHealthHabit(id) {
+  await db.collection('users').doc(currentUser.uid)
+    .collection('healthHabits').doc(id).delete();
+  userHealthHabits = userHealthHabits.filter(h => h.id !== id);
+  renderHealthHabits();
+}
+
+function getHabitStatusText(habitId, h) {
+  if (habitId === 'sleep') {
+    if (h.sleep_time && h.wake_time) return `${h.sleep_time} → ${h.wake_time}`;
+    if (h.sleep_time) return `Slept at ${h.sleep_time}`;
+    return '';
+  }
+  if (habitId === 'phone') {
+    return h.greyscale_on ? `Greyscale: ${h.greyscale_on}` : '';
+  }
+  if (habitId === 'activity') {
+    const parts = [];
+    if (h.steps) parts.push(`${h.steps} steps`);
+    if (h.heart_points) parts.push(`${h.heart_points} HP`);
+    return parts.join(' · ');
+  }
+  if (habitId === 'meals') {
+    const done = [h.breakfast, h.lunch, h.snack, h.dinner].filter(Boolean).length;
+    return done ? `${done}/4 meals logged` : '';
+  }
+  return '';
+}
+
+function mealSelectHTML(mealKey, sourceKey, h) {
+  const src = h[sourceKey] || '';
+  const val = h[mealKey] || '';
+  return `
+    <div class="hs-field-group">
+      <label class="hs-field-label">${mealKey.charAt(0).toUpperCase() + mealKey.slice(1)}</label>
+      <select class="hs-select" data-field="${sourceKey}">
+        <option value="">Source…</option>
+        <option value="home" ${src==='home'?'selected':''}>Home</option>
+        <option value="outside" ${src==='outside'?'selected':''}>Outside</option>
+        <option value="skipped" ${src==='skipped'?'selected':''}>Skipped</option>
+      </select>
+      <input type="text" class="hs-input" data-field="${mealKey}" placeholder="What did you eat?" value="${escapeHtml(val)}">
+    </div>`;
+}
+
+function builtinHabitBodyHTML(habitId, h) {
+  if (habitId === 'sleep') {
+    return `
+      <div class="hs-body-grid">
+        <div class="hs-field-group">
+          <label class="hs-field-label">Sleep time</label>
+          <input type="time" class="hs-input" data-field="sleep_time" value="${h.sleep_time||''}">
+        </div>
+        <div class="hs-field-group">
+          <label class="hs-field-label">Wake time</label>
+          <input type="time" class="hs-input" data-field="wake_time" value="${h.wake_time||''}">
+        </div>
+        <div class="hs-field-group">
+          <label class="hs-field-label">Quality</label>
+          <div class="stars" id="sleepQuality" data-field="sleep_quality">
+            ${[1,2,3,4,5].map(v=>`<span class="star${(h.sleep_quality||0)>=v?' active':''}" data-val="${v}">★</span>`).join('')}
+          </div>
+        </div>
+        <div class="hs-computed" id="sleepHours">
+          <span class="computed-value">—</span>
+          <span class="computed-unit"></span>
+        </div>
+      </div>`;
+  }
+  if (habitId === 'phone') {
+    return `
+      <div class="hs-body-grid">
+        <div class="hs-field-group">
+          <label class="hs-field-label">Greyscale on at</label>
+          <input type="time" class="hs-input" data-field="greyscale_on" value="${h.greyscale_on||''}">
+        </div>
+        <div class="hs-computed" id="greyscaleHours">
+          <span class="computed-value">—</span>
+          <span class="computed-unit"></span>
+        </div>
+      </div>`;
+  }
+  if (habitId === 'activity') {
+    return `
+      <div class="hs-body-grid">
+        <div class="hs-field-group">
+          <label class="hs-field-label">Steps</label>
+          <input type="number" class="hs-input" data-field="steps" placeholder="e.g. 8000" value="${h.steps||''}">
+        </div>
+        <div class="hs-field-group">
+          <label class="hs-field-label">Heart Points</label>
+          <input type="number" class="hs-input" data-field="heart_points" placeholder="e.g. 30" value="${h.heart_points||''}">
+        </div>
+        <div class="hs-progress-wrap">
+          <div class="hs-progress-bar" id="stepsBar">
+            <div class="hs-progress-fill" id="stepsBarFill" style="width:0%"></div>
+          </div>
+          <span class="hs-progress-label" id="stepsGoalPct">0%</span>
+        </div>
+      </div>`;
+  }
+  if (habitId === 'meals') {
+    return `
+      <div class="hs-body-grid hs-meals-grid">
+        ${mealSelectHTML('breakfast','breakfast_source',h)}
+        ${mealSelectHTML('lunch','lunch_source',h)}
+        ${mealSelectHTML('snack','snack_source',h)}
+        ${mealSelectHTML('dinner','dinner_source',h)}
+      </div>`;
+  }
+  return '';
+}
+
+function customHabitBodyHTML(habitId, h) {
+  const done = !!(h.customHabits?.[habitId]?.done);
+  const note = h.customHabits?.[habitId]?.note || '';
+  return `
+    <div class="hs-body-grid">
+      <div class="hs-field-group hs-custom-row">
+        <label class="hs-toggle-label">
+          <input type="checkbox" class="hs-checkbox" data-custom-done="${habitId}" ${done?'checked':''}>
+          <span>Done today</span>
+        </label>
+      </div>
+      <div class="hs-field-group">
+        <label class="hs-field-label">Note</label>
+        <input type="text" class="hs-input" data-custom-note="${habitId}" placeholder="Optional note…" value="${escapeHtml(note)}">
+      </div>
+    </div>`;
+}
+
+function renderHealthHabits() {
+  const container = document.getElementById('healthHabitsContainer');
+  if (!container) return;
   const h = getDayData(currentDate).health;
 
-  setVal('sleepTime',   h.sleep_time);
-  setVal('wakeTime',    h.wake_time);
-  setVal('greyscaleOn', h.greyscale_on);
-  setVal('stepsInput',  h.steps);
-  setVal('heartInput',  h.heart_points);
+  container.innerHTML = userHealthHabits.map(habit => {
+    const collapsed = !healthCollapseState[habit.id];
+    const statusText = habit.type === 'builtin'
+      ? getHabitStatusText(habit.id, h)
+      : (h.customHabits?.[habit.id]?.done ? 'Done ✓' : '');
+    const bodyHTML = habit.type === 'builtin'
+      ? builtinHabitBodyHTML(habit.id, h)
+      : customHabitBodyHTML(habit.id, h);
 
-  document.querySelectorAll('[data-field$="_source"]').forEach(el => {
-    el.value = h[el.dataset.field] || '';
-  });
-  ['breakfast','lunch','snack','dinner'].forEach(m => {
-    const el = document.querySelector(`[data-field="${m}"]`);
-    if (el) el.value = h[m] || '';
-  });
+    return `
+      <div class="hs-section" data-habit-id="${habit.id}" data-habit-type="${habit.type}">
+        <div class="hs-header">
+          <span class="hs-chevron">${collapsed ? '▶' : '▼'}</span>
+          <span class="hs-icon">${escapeHtml(habit.icon)}</span>
+          <span class="hs-name">${escapeHtml(habit.name)}</span>
+          ${statusText ? `<span class="hs-status">${escapeHtml(statusText)}</span>` : ''}
+          <div class="hs-header-actions">
+            <button class="hs-edit-btn" data-habit-id="${habit.id}" title="Edit habit">✏️</button>
+            <button class="hs-delete-btn" data-habit-id="${habit.id}" title="Delete habit">🗑️</button>
+          </div>
+        </div>
+        <div class="hs-body" style="${collapsed ? 'display:none' : ''}">
+          ${bodyHTML}
+        </div>
+      </div>`;
+  }).join('');
 
-  setStars(h.sleep_quality || 0);
   updateComputed();
+  const h2 = getDayData(currentDate).health;
+  setStars(h2.sleep_quality || 0);
+  const pct = healthCompletion(h2);
+  const ring = document.getElementById('sleepRing');
+  if (ring) ring.setAttribute('stroke-dasharray', `${pct} ${100 - pct}`);
+  const pctEl = document.getElementById('sleepPct');
+  if (pctEl) pctEl.textContent = `${pct}%`;
+}
+
+function updateHabitStatus(habitId) {
+  const section = document.querySelector(`.hs-section[data-habit-id="${habitId}"]`);
+  if (!section) return;
+  const h = getDayData(currentDate).health;
+  const statusText = section.dataset.habitType === 'builtin'
+    ? getHabitStatusText(habitId, h)
+    : (h.customHabits?.[habitId]?.done ? 'Done ✓' : '');
+  let statusEl = section.querySelector('.hs-status');
+  if (statusText) {
+    if (!statusEl) {
+      statusEl = document.createElement('span');
+      statusEl.className = 'hs-status';
+      section.querySelector('.hs-header').insertBefore(statusEl, section.querySelector('.hs-header-actions'));
+    }
+    statusEl.textContent = statusText;
+  } else if (statusEl) {
+    statusEl.remove();
+  }
+}
+
+function initHealthContainerEvents() {
+  const container = document.getElementById('healthHabitsContainer');
+  if (!container) return;
+
+  // Toggle collapse
+  container.addEventListener('click', e => {
+    const header = e.target.closest('.hs-header');
+    if (!header) return;
+    // Don't collapse when clicking buttons
+    if (e.target.closest('.hs-edit-btn') || e.target.closest('.hs-delete-btn')) return;
+    const section = header.closest('.hs-section');
+    const id = section.dataset.habitId;
+    healthCollapseState[id] = !healthCollapseState[id];
+    const chevron = header.querySelector('.hs-chevron');
+    const body = section.querySelector('.hs-body');
+    if (healthCollapseState[id]) {
+      body.style.display = '';
+      chevron.textContent = '▼';
+    } else {
+      body.style.display = 'none';
+      chevron.textContent = '▶';
+    }
+  });
+
+  // Edit habit button
+  container.addEventListener('click', e => {
+    const btn = e.target.closest('.hs-edit-btn');
+    if (!btn) return;
+    const id = btn.dataset.habitId;
+    const habit = userHealthHabits.find(h => h.id === id);
+    if (habit) openHealthHabitModal(habit);
+  });
+
+  // Delete habit button
+  container.addEventListener('click', async e => {
+    const btn = e.target.closest('.hs-delete-btn');
+    if (!btn) return;
+    const id = btn.dataset.habitId;
+    if (!confirm('Delete this habit?')) return;
+    await deleteHealthHabit(id);
+  });
+
+  // Built-in input changes
+  container.addEventListener('change', e => {
+    const field = e.target.dataset.field;
+    if (!field) return;
+    const section = e.target.closest('.hs-section');
+    if (!section) return;
+    const habitId = section.dataset.habitId;
+    const day = getDayData(currentDate);
+    day.health[field] = e.target.value;
+    saveDayData(currentDate, day);
+    updateComputed();
+    updateHabitStatus(habitId);
+  });
+
+  container.addEventListener('input', e => {
+    const field = e.target.dataset.field;
+    if (!field) return;
+    const section = e.target.closest('.hs-section');
+    if (!section) return;
+    const habitId = section.dataset.habitId;
+    const day = getDayData(currentDate);
+    day.health[field] = e.target.value;
+    saveDayData(currentDate, day);
+    updateComputed();
+    updateHabitStatus(habitId);
+  });
+
+  // Stars (sleep quality)
+  container.addEventListener('click', e => {
+    const star = e.target.closest('.star');
+    if (!star) return;
+    const val = parseInt(star.dataset.val);
+    const day = getDayData(currentDate);
+    day.health.sleep_quality = val;
+    saveDayData(currentDate, day);
+    setStars(val);
+    updateHabitStatus('sleep');
+  });
+
+  // Custom habit done checkbox
+  container.addEventListener('change', e => {
+    const habitId = e.target.dataset.customDone;
+    if (!habitId) return;
+    const day = getDayData(currentDate);
+    if (!day.health.customHabits) day.health.customHabits = {};
+    if (!day.health.customHabits[habitId]) day.health.customHabits[habitId] = {};
+    day.health.customHabits[habitId].done = e.target.checked;
+    saveDayData(currentDate, day);
+    updateHabitStatus(habitId);
+    renderPendingHabits();
+  });
+
+  // Custom habit note
+  container.addEventListener('input', e => {
+    const habitId = e.target.dataset.customNote;
+    if (!habitId) return;
+    const day = getDayData(currentDate);
+    if (!day.health.customHabits) day.health.customHabits = {};
+    if (!day.health.customHabits[habitId]) day.health.customHabits[habitId] = {};
+    day.health.customHabits[habitId].note = e.target.value;
+    saveDayData(currentDate, day);
+  });
+}
+
+function openHealthHabitModal(habit) {
+  currentEditHabitId = habit ? habit.id : null;
+  document.getElementById('hhModalTitle').textContent = habit ? 'Edit Habit' : 'Add Habit';
+  document.getElementById('hhIcon').value = habit ? habit.icon : '';
+  document.getElementById('hhName').value = habit ? habit.name : '';
+  document.getElementById('healthHabitModal').style.display = 'flex';
+}
+
+async function saveHealthHabitModal() {
+  const icon = document.getElementById('hhIcon').value.trim() || '✅';
+  const name = document.getElementById('hhName').value.trim();
+  if (!name) return;
+
+  if (currentEditHabitId) {
+    const habit = userHealthHabits.find(h => h.id === currentEditHabitId);
+    if (habit) {
+      habit.icon = icon;
+      habit.name = name;
+      await saveHealthHabit(habit);
+    }
+  } else {
+    const id = 'custom_' + Date.now();
+    const order = userHealthHabits.length;
+    const habit = { id, name, icon, type: 'custom', order };
+    userHealthHabits.push(habit);
+    await saveHealthHabit(habit);
+  }
+
+  document.getElementById('healthHabitModal').style.display = 'none';
+  renderHealthHabits();
 }
 
 function setVal(id, val) {
   const el = document.getElementById(id);
   if (el) el.value = val || '';
-}
-
-function setStars(val) {
-  document.querySelectorAll('#sleepQuality .star').forEach(s =>
-    s.classList.toggle('active', parseInt(s.dataset.val) <= val)
-  );
 }
 
 /* ── RENDER — SADHANA FORM ──────────────────────────────── */
@@ -358,20 +706,34 @@ function renderReading() {
 function updateComputed() {
   const h = getDayData(currentDate).health;
 
-  const sh  = calcHours(h.sleep_time, h.wake_time);
+  const sh   = calcHours(h.sleep_time, h.wake_time);
   const shEl = document.getElementById('sleepHours');
-  shEl.querySelector('.computed-value').textContent = sh !== null ? sh : '—';
-  shEl.querySelector('.computed-unit').textContent  = sh !== null ? 'hrs' : '';
+  if (shEl) {
+    shEl.querySelector('.computed-value').textContent = sh !== null ? sh : '—';
+    shEl.querySelector('.computed-unit').textContent  = sh !== null ? 'hrs' : '';
+  }
 
-  const gh  = calcHours(h.greyscale_on, h.wake_time);
+  const gh   = calcHours(h.greyscale_on, h.wake_time);
   const ghEl = document.getElementById('greyscaleHours');
-  ghEl.querySelector('.computed-value').textContent = gh !== null ? gh : '—';
-  ghEl.querySelector('.computed-unit').textContent  = gh !== null ? 'hrs' : '';
+  if (ghEl) {
+    ghEl.querySelector('.computed-value').textContent = gh !== null ? gh : '—';
+    ghEl.querySelector('.computed-unit').textContent  = gh !== null ? 'hrs' : '';
+  }
 
   const steps    = parseInt(h.steps) || 0;
   const stepsPct = Math.min(100, Math.round(steps / STEPS_GOAL * 100));
-  document.getElementById('stepsBar').style.width         = stepsPct + '%';
-  document.getElementById('stepsGoalPct').textContent     = stepsPct + '%';
+  const stepsBarFill = document.getElementById('stepsBarFill');
+  const stepsGoalPct = document.getElementById('stepsGoalPct');
+  if (stepsBarFill)  stepsBarFill.style.width  = stepsPct + '%';
+  if (stepsGoalPct)  stepsGoalPct.textContent  = stepsPct + '%';
+}
+
+function setStars(val) {
+  const sq = document.getElementById('sleepQuality');
+  if (!sq) return;
+  sq.querySelectorAll('.star').forEach(s =>
+    s.classList.toggle('active', parseInt(s.dataset.val) <= val)
+  );
 }
 
 /* ── PLANNER — STREAK HELPERS ───────────────────────────── */
@@ -712,6 +1074,13 @@ function renderPendingHabits() {
   if (!s.upa_yoga)      items.push({ label: '🌀 Upa Yoga', tab: 'sadhana' });
   if (!s.sck)           items.push({ label: '⚡ SCK', tab: 'sadhana' });
   if (!r.did_read) items.push({ label: '📚 Reading', tab: 'reading' });
+
+  // Custom health habits
+  userHealthHabits.filter(hb => hb.type === 'custom').forEach(hb => {
+    if (!(h.customHabits?.[hb.id]?.done)) {
+      items.push({ label: `${hb.icon} ${hb.name}`, tab: 'health' });
+    }
+  });
 
   if (!items.length) {
     panel.classList.add('empty');
@@ -1295,6 +1664,7 @@ async function startApp() {
   showLoading(true);
   await loadAllData();
   await loadUserSections();
+  await loadHealthHabits();
   renderCustomSections();
   renderUserMenu(currentUser);
   renderAll();
@@ -1318,6 +1688,7 @@ if (!FIREBASE_CONFIGURED) {
       }, { merge: true }).catch(() => {});
       await loadAllData();
       await loadUserSections();
+      await loadHealthHabits();
       renderCustomSections();
       renderUserMenu(user);
       renderAll();
@@ -1473,7 +1844,7 @@ function init() {
   });
 
   /* Health & Sadhana events */
-  initHealthEvents();
+  initHealthContainerEvents();
   initSadhanaEvents();
 
   /* Export */
@@ -1484,6 +1855,16 @@ function init() {
   );
   setQuickRange(7);
 
+
+  /* Health habit modal */
+  document.getElementById('addHealthHabitBtn').addEventListener('click', () => openHealthHabitModal(null));
+  document.getElementById('hhSave').addEventListener('click', saveHealthHabitModal);
+  document.getElementById('hhCancel').addEventListener('click', () => {
+    document.getElementById('healthHabitModal').style.display = 'none';
+  });
+  document.getElementById('healthHabitModal').addEventListener('click', e => {
+    if (e.target.id === 'healthHabitModal') document.getElementById('healthHabitModal').style.display = 'none';
+  });
 
   /* Confirm modal */
   document.getElementById('confirmCancel').addEventListener('click', hideConfirm);
