@@ -19,93 +19,104 @@
 </head>
 <body>
 
-<!-- ── HEADER ─────────────────────────────────────────── -->
-<header class="app-header">
-  <div class="header-top">
-    <div class="app-brand">
-      <span class="brand-icon">✦</span>
-      <span class="brand-name">Habit Tracker</span>
+<!-- ── LEFT SIDEBAR ───────────────────────────────────── -->
+<aside class="app-sidebar" id="appSidebar">
+
+  <div class="sidebar-brand">
+    <span class="brand-icon">✦</span>
+    <span class="brand-name">Habit Tracker</span>
+  </div>
+
+  <nav class="sidebar-nav" id="sidebarNav">
+
+    <div class="nav-group-label">Habits Tracking</div>
+
+    <button class="nav-item active" data-tab="health">
+      <span class="nav-icon">💚</span>
+      <span class="nav-label">Health</span>
+      <span class="nav-badge" id="healthBadge">0%</span>
+    </button>
+    <button class="nav-item" data-tab="sadhana">
+      <span class="nav-icon">🔮</span>
+      <span class="nav-label">Sadhana</span>
+      <span class="nav-badge" id="sadhanaBadge">0%</span>
+    </button>
+    <button class="nav-item" data-tab="reading">
+      <span class="nav-icon">📚</span>
+      <span class="nav-label">Reading Habits</span>
+      <span class="nav-badge" id="readingBadge">0%</span>
+    </button>
+    <button class="nav-item" data-tab="tracker">
+      <span class="nav-icon">⏱️</span>
+      <span class="nav-label">Daily Tracker</span>
+    </button>
+
+    <div class="nav-group-label">Planner</div>
+
+    <button class="nav-item" data-tab="planner">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Daily Planner</span>
+    </button>
+    <button class="nav-item" data-tab="meal">
+      <span class="nav-icon">🥗</span>
+      <span class="nav-label">Meal Planner</span>
+    </button>
+
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="nav-item" data-tab="export">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Export Data</span>
+    </button>
+
+    <div class="sidebar-streak">
+      <span class="sidebar-streak-icon">🔥</span>
+      <span id="streakDisplay">0</span>
+      <span class="sidebar-streak-label">day streak</span>
     </div>
-    <div class="header-actions">
-      <button class="icon-btn" id="exportBtn" title="Export Data">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      </button>
-      <button class="icon-btn" id="streakBtn" title="Streak">
-        <span id="streakDisplay">🔥 0</span>
-      </button>
-      <!-- User Avatar (shown when logged in) -->
-      <div class="user-menu" id="userMenu" style="display:none">
-        <img class="user-avatar" id="userPhoto" src="" alt="" title="">
-        <div class="user-dropdown" id="userDropdown" style="display:none">
-          <div class="user-info">
-            <span class="user-name" id="userName"></span>
-            <span class="user-email" id="userEmail"></span>
-          </div>
-          <button class="signout-btn" id="signOutBtn">Sign out</button>
-        </div>
+
+    <!-- User menu -->
+    <div class="sidebar-user" id="userMenu" style="display:none">
+      <img class="user-avatar" id="userPhoto" src="" alt="" title="">
+      <div class="sidebar-user-info">
+        <span class="user-name" id="userName"></span>
+        <span class="user-email" id="userEmail"></span>
+      </div>
+      <div class="user-dropdown" id="userDropdown" style="display:none">
+        <button class="signout-btn" id="signOutBtn">Sign out</button>
       </div>
     </div>
   </div>
 
-  <!-- Date Navigation -->
-  <div class="date-nav">
-    <button class="date-arrow" id="prevDay">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+</aside>
+
+<!-- Mobile sidebar overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ── HEADER ─────────────────────────────────────────── -->
+<header class="app-header">
+  <div class="header-top-bar">
+    <button class="hamburger-btn" id="sidebarToggle" aria-label="Toggle menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <div class="date-center">
-      <div class="date-label" id="dateLabel">Today</div>
-      <div class="date-full" id="dateFull"></div>
+    <div class="date-nav">
+      <button class="date-arrow" id="prevDay">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="date-center">
+        <div class="date-label" id="dateLabel">Today</div>
+        <div class="date-full" id="dateFull"></div>
+      </div>
+      <button class="date-arrow" id="nextDay">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
-    <button class="date-arrow" id="nextDay">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
   </div>
 
   <!-- Week Strip -->
   <div class="week-strip" id="weekStrip"></div>
 </header>
-
-<!-- ── CATEGORY TABS ──────────────────────────────────── -->
-<div class="tabs-container">
-  <div class="tabs" id="categoryTabs">
-    <button class="tab active" data-tab="health">
-      <span class="tab-icon">💚</span>
-      <span class="tab-label">Health</span>
-      <span class="tab-badge" id="healthBadge">0%</span>
-    </button>
-    <button class="tab" data-tab="sadhana">
-      <span class="tab-icon">🔮</span>
-      <span class="tab-label">Sadhana</span>
-      <span class="tab-badge" id="sadhanaBadge">0%</span>
-    </button>
-    <button class="tab" data-tab="t">
-      <span class="tab-icon">⚡</span>
-      <span class="tab-label">T</span>
-      <span class="tab-badge" id="tBadge">—</span>
-    </button>
-    <button class="tab" data-tab="reading">
-      <span class="tab-icon">📚</span>
-      <span class="tab-label">Reading</span>
-      <span class="tab-badge" id="readingBadge">0%</span>
-    </button>
-    <button class="tab" data-tab="tracker">
-      <span class="tab-icon">⏱️</span>
-      <span class="tab-label">Tracker</span>
-    </button>
-    <button class="tab" data-tab="planner">
-      <span class="tab-icon">📋</span>
-      <span class="tab-label">Planner</span>
-    </button>
-    <button class="tab" data-tab="meal">
-      <span class="tab-icon">🥗</span>
-      <span class="tab-label">Meals</span>
-    </button>
-    <button class="tab" data-tab="export">
-      <span class="tab-icon">📊</span>
-      <span class="tab-label">Export</span>
-    </button>
-  </div>
-</div>
 
 <!-- ── MAIN CONTENT ───────────────────────────────────── -->
 <main class="main-content">

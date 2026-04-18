@@ -235,7 +235,7 @@ function renderHeader() {
     currentDate === offsetDate(today,  1)   ? 'Tomorrow'  : '';
   document.getElementById('dateFull').textContent = formatDateFull(currentDate);
   document.getElementById('nextDay').disabled = currentDate >= today;
-  document.getElementById('streakDisplay').textContent = `🔥 ${calcStreak()}`;
+  document.getElementById('streakDisplay').textContent = calcStreak();
   renderWeekStrip();
 }
 
@@ -901,12 +901,23 @@ function navigateTo(dateStr) {
 
 /* ── TAB SWITCHING ──────────────────────────────────────── */
 function switchTab(tabName) {
-  document.querySelectorAll('.tab').forEach(t =>
+  document.querySelectorAll('.nav-item[data-tab]').forEach(t =>
     t.classList.toggle('active', t.dataset.tab === tabName)
   );
   document.querySelectorAll('.tab-section').forEach(s =>
     s.classList.toggle('active', s.id === `tab-${tabName}`)
   );
+  closeSidebar();
+}
+
+function openSidebar() {
+  document.getElementById('appSidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('visible');
+}
+
+function closeSidebar() {
+  document.getElementById('appSidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('visible');
 }
 
 /* ── EVENT HANDLERS — HEALTH ────────────────────────────── */
@@ -1137,6 +1148,20 @@ function renderUserMenu(user) {
   }
 }
 
+/* ── USER AVATAR TOGGLE (sidebar) ───────────────────────── */
+function initUserMenuToggle() {
+  document.getElementById('userPhoto').addEventListener('click', () => {
+    const dd = document.getElementById('userDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#userMenu')) {
+      const dd = document.getElementById('userDropdown');
+      if (dd) dd.style.display = 'none';
+    }
+  });
+}
+
 /* ── AUTH — GOOGLE SIGN-IN ──────────────────────────────── */
 function signInWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
@@ -1159,7 +1184,6 @@ async function startApp() {
   renderUserMenu(currentUser);
   renderAll();
   showLoading(false);
-  await checkFirstLogin();
 }
 
 if (!FIREBASE_CONFIGURED) {
@@ -1184,7 +1208,6 @@ if (!FIREBASE_CONFIGURED) {
       renderAll();
       showLoading(false);
       showToast(`👋 Welcome back, ${user.displayName?.split(' ')[0] || 'there'}!`);
-      await checkFirstLogin();
     } else {
       currentUser = null;
       data        = {};
@@ -1198,11 +1221,18 @@ if (!FIREBASE_CONFIGURED) {
 
 /* ── INIT ───────────────────────────────────────────────── */
 function init() {
-  /* Tab switching */
-  document.getElementById('categoryTabs').addEventListener('click', e => {
-    const tab = e.target.closest('[data-tab]');
-    if (tab) switchTab(tab.dataset.tab);
+  /* Sidebar nav switching */
+  document.getElementById('sidebarNav').addEventListener('click', e => {
+    const item = e.target.closest('[data-tab]');
+    if (item) switchTab(item.dataset.tab);
   });
+  /* Export in sidebar footer also triggers tab switch */
+  document.querySelector('.sidebar-footer .nav-item[data-tab="export"]')
+    ?.addEventListener('click', () => switchTab('export'));
+
+  /* Hamburger / sidebar toggle (mobile) */
+  document.getElementById('sidebarToggle').addEventListener('click', openSidebar);
+  document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
 
   /* Planner — collapsible sections */
   document.querySelectorAll('.ps-header').forEach(hdr => {
@@ -1309,9 +1339,6 @@ function init() {
     if (currentDate < todayStr()) navigateTo(offsetDate(currentDate, 1));
   });
 
-  /* Export shortcut */
-  document.getElementById('exportBtn').addEventListener('click', () => switchTab('export'));
-
   /* Health & Sadhana events */
   initHealthEvents();
   initSadhanaEvents();
@@ -1339,19 +1366,8 @@ function init() {
     showConfirm('Sign out?', 'Your data is safely saved in the cloud.', signOut, 'Sign out');
   });
 
-  /* User avatar toggles dropdown */
-  document.getElementById('userPhoto').addEventListener('click', () => {
-    const dd = document.getElementById('userDropdown');
-    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
-  });
-
-  /* Close dropdown when clicking outside */
-  document.addEventListener('click', e => {
-    if (!e.target.closest('#userMenu')) {
-      const dd = document.getElementById('userDropdown');
-      if (dd) dd.style.display = 'none';
-    }
-  });
+  /* User avatar dropdown (sidebar) */
+  initUserMenuToggle();
 
   /* Keyboard navigation */
   document.addEventListener('keydown', e => {
