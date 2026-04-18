@@ -231,23 +231,60 @@ function navigateTo(dateStr) {
   renderTrends();
 }
 
-/* ── USER MENU ───────────────────────────────────────────── */
+/* ── VIEW SWITCHING ──────────────────────────────────────── */
+function switchView(viewName) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const view = document.getElementById(`view-${viewName}`);
+  const nav  = document.querySelector(`.nav-item[data-view="${viewName}"]`);
+  if (view) view.classList.add('active');
+  if (nav)  nav.classList.add('active');
+  if (viewName === 'trends') renderTrends();
+}
+
+/* ── SIDEBAR (mobile drawer) ─────────────────────────────── */
+function toggleSidebar() {
+  const sidebar = document.getElementById('appSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const isOpen  = sidebar.classList.contains('sidebar-open');
+  sidebar.classList.toggle('sidebar-open', !isOpen);
+  overlay.classList.toggle('sidebar-open', !isOpen);
+}
+function closeSidebar() {
+  document.getElementById('appSidebar').classList.remove('sidebar-open');
+  document.getElementById('sidebarOverlay').classList.remove('sidebar-open');
+}
+
+/* ── USER INFO ───────────────────────────────────────────── */
 function renderUserMenu(user) {
-  const btn   = document.getElementById('userBtn');
+  const info  = document.getElementById('userInfo');
   const photo = document.getElementById('userPhoto');
   const name  = document.getElementById('userName');
   const email = document.getElementById('userEmail');
-  if (!user) { if (btn) btn.style.display = 'none'; return; }
-  if (btn)   btn.style.display  = 'flex';
-  if (photo) photo.src          = user.photoURL || '';
-  if (name)  name.textContent   = user.displayName || '';
-  if (email) email.textContent  = user.email || '';
+  if (!user) { if (info) info.style.display = 'none'; return; }
+  if (info)  info.style.display  = 'flex';
+  if (photo) photo.src           = user.photoURL || '';
+  if (name)  name.textContent    = user.displayName || '';
+  if (email) email.textContent   = user.email || '';
 }
 
 /* ── INIT ────────────────────────────────────────────────── */
 function init() {
   renderPracticeList();
 
+  /* Sidebar nav */
+  document.querySelectorAll('.nav-item[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchView(btn.dataset.view);
+      closeSidebar();
+    });
+  });
+
+  /* Hamburger + overlay */
+  document.getElementById('hamburgerBtn').addEventListener('click', toggleSidebar);
+  document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+
+  /* Date nav */
   document.getElementById('prevDay').addEventListener('click', () =>
     navigateTo(offsetDate(currentDate, -1))
   );
@@ -255,25 +292,12 @@ function init() {
     if (currentDate < todayStr()) navigateTo(offsetDate(currentDate, 1));
   });
 
+  /* Auth */
   document.getElementById('googleSignIn').addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(e => console.error('Sign-in error:', e));
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+      .catch(e => console.error('Sign-in error:', e));
   });
-
-  document.getElementById('userBtn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    const menu = document.getElementById('userDropdown');
-    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-  });
-
-  document.getElementById('signOutBtn').addEventListener('click', () => {
-    auth.signOut();
-  });
-
-  document.addEventListener('click', () => {
-    const menu = document.getElementById('userDropdown');
-    if (menu) menu.style.display = 'none';
-  });
+  document.getElementById('signOutBtn').addEventListener('click', () => auth.signOut());
 }
 
 /* ── AUTH STATE ──────────────────────────────────────────── */
