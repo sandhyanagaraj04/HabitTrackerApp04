@@ -51,17 +51,24 @@ const DEFAULT_SADHANA_PRACTICES = [
   { id: 'shambhavi_evening',   name: 'Shambhavi (Evening)',             icon: '🌅', desc: '' },
 ];
 
-let mealOptions = {
-  breakfast: ['Oats & Banana', 'Poha', 'Idli & Sambar', 'Dosa', 'Paratha', 'Bread & Eggs'],
-  lunch:     ['Rice & Dal', 'Roti & Sabzi', 'Salad Bowl', 'Pulao', 'Biryani'],
-  snack:     ['Fruits', 'Nuts & Seeds', 'Tea & Biscuits', 'Yogurt', 'Protein Bar'],
-  dinner:    ['Chapati & Sabzi', 'Rice & Curry', 'Khichdi', 'Dal & Rice', 'Soup & Salad']
-};
-let mealPlanWeekStart  = null;
 let userRecipes        = [];
-let shoppingChecked    = {};
-let activeMealTab      = 'plan';
 let currentEditRecipeId = null;
+let mealOptions        = {}; // legacy compat — kept for loadAllData
+
+/* ── NEW MEAL PLANNER STATE ─────────────────────────────── */
+let mpWeekStart       = null;   // Monday string for current planning week
+let mpDefaultServings = 2;
+let mpActivePicker    = null;   // { date, mealType }
+let mpActiveIngSlot   = null;   // { date, mealType }
+let mpPickerQuery     = '';
+let mpRecipeServings  = 2;      // servings counter in the recipe/meal modal
+
+const MP_MEAL_SLOTS = [
+  { key: 'breakfast', icon: '🌅', label: 'Breakfast' },
+  { key: 'lunch',     icon: '☀️', label: 'Lunch'     },
+  { key: 'snack',     icon: '🌤️', label: 'Snack'     },
+  { key: 'dinner',    icon: '🌙', label: 'Dinner'    },
+];
 
 let userSections      = [];   // [{ id, name, icon, type, order, visible }]
 let userHealthHabits  = [];   // [{ id, name, icon, type, order }]
@@ -138,9 +145,10 @@ function defaultDay() {
     })(),
     t: {},
     plan: { breakfast: '', lunch: '', snack: '', dinner: '' },
-    reading: { did_read: false, book_title: '', author: '', pages_read: 0, duration_mins: 0, notes: '' },
-    tracker: {},
-    priorities: ['', '', '']
+    reading:   { did_read: false, book_title: '', author: '', pages_read: 0, duration_mins: 0, notes: '' },
+    tracker:   {},
+    priorities: ['', '', ''],
+    mealSlots: {}
   };
 }
 
@@ -882,11 +890,87 @@ function renderPlanner() {
   if (psr) psr.textContent = readingSectionStreak > 0 ? `🔥 ${readingSectionStreak}` : '';
 }
 
-/* ── MEAL PLANNER — DATA ────────────────────────────────── */
-function getMealPlanDay(dateStr) {
-  if (!data[dateStr]) data[dateStr] = defaultDay();
-  if (!data[dateStr].plan) data[dateStr].plan = { breakfast: '', lunch: '', snack: '', dinner: '' };
-  return data[dateStr].plan;
+/* ── MEAL PLANNER v2 — DATA HELPERS ────────────────────── */
+function getMpSlot(dateStr, mealType) {
+  const d = getDayData(dateStr);
+  if (!d.mealSlots) d.mealSlots = {};
+  if (!d.mealSlots[mealType]) {
+    d.mealSlots[mealType] = { mealId: null, servingsOverride: null, ingredientsState: [] };
+  }
+  return d.mealSlots[mealType];
+}
+
+function getMpMeal(mealId) {
+  return userRecipes.find(r => r.id === mealId) || null;
+}
+
+function isMpMealRecent(mealId) {
+  const today = todayStr();
+  for (let i = 1; i <= 7; i++) {
+    const d = offsetDate(today, -i);
+    if (Object.values(data[d]?.mealSlots || {}).some(s => s.mealId === mealId)) return true;
+  }
+  return false;
+}
+
+function selectMpMeal(dateStr, mealType, mealId) {
+  const slot = getMpSlot(dateStr, mealType);
+  const meal = getMpMeal(mealId);
+  slot.mealId = mealId;
+  slot.servingsOverride = null;
+  const baseServings = meal?.defaultServings || 2;
+  const scale = mpDefaultServings / Math.max(1, baseServings);
+  slot.ingredientsState = (meal?.ingredients || []).map(ing => ({
+    name:     ing.name,
+    qty:      ing.qty ? String(Math.round(parseFloat(ing.qty) * scale * 10) / 10) : '',
+    unit:     ing.unit || '',
+    category: ing.category || 'General',
+    checked:  false,
+  }));
+  saveData();
+  renderMpDays();
+}
+
+function rescaleMpIngredients(dateStr, mealType) {
+  const slot = getMpSlot(dateStr, mealType);
+  const meal = getMpMeal(slot.mealId);
+  if (!meal?.ingredients?.length) return;
+  const targetServings = slot.servingsOverride ?? mpDefaultServings;
+  const scale = targetServings / Math.max(1, meal.defaultServings || 2);
+  slot.ingredientsState = meal.ingredients.map((ing, i) => ({
+    name:     ing.name,
+    qty:      ing.qty ? String(Math.round(parseFloat(ing.qty) * scale * 10) / 10) : '',
+    unit:     ing.unit || '',
+    category: ing.category || 'General',
+    checked:  slot.ingredientsState[i]?.checked || false,
+  }));
+}
+
+function buildMpGroceryList() {
+  if (!mpWeekStart) return [];
+  const weekDates = getWeekDates(mpWeekStart);
+  const map = {};
+  weekDates.forEach(d => {
+    MP_MEAL_SLOTS.forEach(({ key }) => {
+      const slot = data[d]?.mealSlots?.[key];
+      if (!slot?.ingredientsState?.length) return;
+      slot.ingredientsState.forEach(ing => {
+        if (ing.checked) return;
+        const cat = ing.category || 'General';
+        const k   = `${ing.name.toLowerCase().trim()}||${(ing.unit || '').toLowerCase()}`;
+        if (!map[cat]) map[cat] = {};
+        if (!map[cat][k]) map[cat][k] = { name: ing.name, qty: 0, unit: ing.unit || '', category: cat };
+        map[cat][k].qty += parseFloat(ing.qty) || 0;
+      });
+    });
+  });
+  const result = [];
+  Object.keys(map).sort().forEach(cat => {
+    Object.values(map[cat]).forEach(item => {
+      result.push({ ...item, qty: item.qty > 0 ? String(Math.round(item.qty * 10) / 10) : '' });
+    });
+  });
+  return result;
 }
 
 async function loadRecipes() {
@@ -894,21 +978,6 @@ async function loadRecipes() {
   const snap = await db.collection('users').doc(currentUser.uid)
     .collection('recipes').orderBy('name').get().catch(() => ({ docs: [] }));
   userRecipes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  loadShoppingChecked();
-}
-
-function loadShoppingChecked() {
-  try {
-    const key = `shopping_${currentUser?.uid || 'anon'}`;
-    shoppingChecked = JSON.parse(localStorage.getItem(key) || '{}');
-  } catch { shoppingChecked = {}; }
-}
-
-function saveShoppingChecked() {
-  try {
-    const key = `shopping_${currentUser?.uid || 'anon'}`;
-    localStorage.setItem(key, JSON.stringify(shoppingChecked));
-  } catch {}
 }
 
 async function saveRecipeToFirestore(recipe) {
@@ -927,257 +996,278 @@ async function deleteRecipeFromFirestore(id) {
   userRecipes = userRecipes.filter(r => r.id !== id);
 }
 
-/* ── MEAL PLANNER — INNER TAB SWITCHER ─────────────────── */
-function switchMealTab(tab) {
-  activeMealTab = tab;
-  document.querySelectorAll('.mp-itab').forEach(b => b.classList.toggle('active', b.dataset.mptab === tab));
-  document.querySelectorAll('.mp-panel').forEach(p => {
-    p.style.display = p.id === `mpp-${tab}` ? '' : 'none';
-  });
-  if (tab === 'plan')     renderMealPlanPanel();
-  if (tab === 'recipes')  renderRecipesPanel();
-  if (tab === 'shopping') renderShoppingPanel();
-}
-
-/* ── MEAL PLANNER — MEAL PLAN PANEL ─────────────────────── */
-function renderMealSelect(date, meal, icon, currentVal) {
-  const labels = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' };
-
-  // Recipes tagged for this meal type (or untagged = show everywhere)
-  const recipeOpts = userRecipes
-    .filter(r => !r.mealTypes?.length || r.mealTypes.includes(meal))
-    .map(r => {
-      const v = r.name.replace(/"/g, '&quot;');
-      return `<option value="${v}"${currentVal === r.name ? ' selected' : ''}>🍴 ${r.name}</option>`;
-    }).join('');
-
-  // Legacy mealOptions (not duplicating recipe names)
-  const legacyOpts = (mealOptions[meal] || [])
-    .filter(o => !userRecipes.some(r => r.name === o))
-    .map(o => {
-      const v = o.replace(/"/g, '&quot;');
-      return `<option value="${v}"${currentVal === o ? ' selected' : ''}>${o}</option>`;
-    }).join('');
-
-  const hasRecipe = !!userRecipes.find(r => r.name === currentVal);
-  return `<div class="mp-meal-row">
-    <span class="mp-meal-icon">${icon}</span>
-    <select class="input-select mp-meal-select" data-date="${date}" data-meal="${meal}">
-      <option value="">— ${labels[meal]} —</option>
-      ${recipeOpts}
-      ${legacyOpts ? `<optgroup label="Other">${legacyOpts}</optgroup>` : ''}
-      <option value="__add__">＋ Add recipe…</option>
-    </select>
-    ${hasRecipe ? '<span class="mp-recipe-badge" title="Has ingredients">📖</span>' : ''}
-  </div>`;
-}
-
-function renderMealPlanPanel() {
-  if (!mealPlanWeekStart) mealPlanWeekStart = getWeekDates(todayStr())[0];
-  const weekDates    = getWeekDates(mealPlanWeekStart);
-  const todayWeekMon = getWeekDates(todayStr())[0];
-  const mon = weekDates[0], sun = weekDates[6];
+/* ── MEAL PLANNER v2 — RENDER ───────────────────────────── */
+function renderMealPlannerV2() {
+  if (!mpWeekStart) mpWeekStart = getWeekDates(todayStr())[0];
+  const weekDates = getWeekDates(mpWeekStart);
   const fmt = d => { const dt = dateObj(d); return `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].slice(0,3)}`; };
+  const wl = document.getElementById('mppWeekLabel');
+  if (wl) wl.textContent = `${fmt(weekDates[0])} – ${fmt(weekDates[6])}`;
+  const nb = document.getElementById('mppNextWeek');
+  if (nb) nb.disabled = weekDates[0] >= getWeekDates(todayStr())[0];
+  const sv = document.getElementById('mppServingsVal');
+  if (sv) sv.textContent = mpDefaultServings;
+  renderMpDays();
+}
 
-  document.getElementById('mpWeekLabel').textContent = `${fmt(mon)} – ${fmt(sun)}`;
-  document.getElementById('mpNextWeek').disabled = mon >= todayWeekMon;
-
-  const MEAL_ICONS = { breakfast: '🌅', lunch: '☀️', snack: '🌤️', dinner: '🌙' };
-  const container   = document.getElementById('mpDays');
+function renderMpDays() {
+  const container = document.getElementById('mppDays');
+  if (!container || !mpWeekStart) return;
+  const weekDates = getWeekDates(mpWeekStart);
 
   container.innerHTML = weekDates.map(d => {
-    const dt = dateObj(d), plan = getMealPlanDay(d), isT = isToday(d);
-    return `<div class="mp-day-card${isT ? ' mp-today' : ''}" data-date="${d}">
-      <div class="mp-day-header">
-        <span class="mp-day-name">${DAY_NAMES[dt.getDay()]}</span>
-        <span class="mp-day-date">${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].slice(0,3)}</span>
-        ${isT ? '<span class="mp-today-badge">Today</span>' : ''}
+    const dt  = dateObj(d);
+    const isT = isToday(d);
+    const slots = MP_MEAL_SLOTS.map(({ key, icon, label }) => {
+      const slot   = data[d]?.mealSlots?.[key];
+      const meal   = slot?.mealId ? getMpMeal(slot.mealId) : null;
+      const total  = slot?.ingredientsState?.length || 0;
+      const needed = total - (slot?.ingredientsState?.filter(i => i.checked).length || 0);
+      return `
+        <div class="mpp-slot">
+          <span class="mpp-slot-icon">${icon}</span>
+          <div class="mpp-slot-body">
+            <span class="mpp-slot-label">${label}</span>
+            ${meal
+              ? `<div class="mpp-slot-filled">
+                  <span class="mpp-slot-meal-name" data-date="${d}" data-meal="${key}">${escapeHtml(meal.name)}</span>
+                  <div class="mpp-slot-chips">
+                    ${total ? `<button class="mpp-ing-chip${needed ? ' mpp-ing-chip-warn' : ' mpp-ing-chip-ok'}" data-date="${d}" data-meal="${key}">${needed ? needed + ' needed' : '✓ set'}</button>` : ''}
+                    <button class="mpp-slot-x" data-date="${d}" data-meal="${key}">✕</button>
+                  </div>
+                </div>`
+              : `<button class="mpp-slot-add" data-date="${d}" data-meal="${key}">＋ Add</button>`
+            }
+          </div>
+        </div>`;
+    }).join('');
+
+    return `<div class="mpp-day-card${isT ? ' mpp-today' : ''}">
+      <div class="mpp-day-hdr">
+        <span class="mpp-day-name">${DAY_NAMES[dt.getDay()]}</span>
+        <span class="mpp-day-date">${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].slice(0,3)}</span>
+        ${isT ? '<span class="mpp-today-pill">Today</span>' : ''}
       </div>
-      <div class="mp-meals">
-        ${renderMealSelect(d, 'breakfast', MEAL_ICONS.breakfast, plan.breakfast)}
-        ${renderMealSelect(d, 'lunch',     MEAL_ICONS.lunch,     plan.lunch)}
-        ${renderMealSelect(d, 'snack',     MEAL_ICONS.snack,     plan.snack)}
-        ${renderMealSelect(d, 'dinner',    MEAL_ICONS.dinner,    plan.dinner)}
-      </div>
+      <div class="mpp-day-slots">${slots}</div>
     </div>`;
   }).join('');
 
-  container.querySelectorAll('.mp-meal-select').forEach(sel => {
-    sel.addEventListener('change', () => {
-      const { date, meal } = sel.dataset;
-      if (sel.value === '__add__') {
-        sel.value = getMealPlanDay(date)[meal] || '';
-        switchMealTab('recipes');
-        openRecipeModal(null);
-        return;
-      }
-      getMealPlanDay(date)[meal] = sel.value;
-      saveMealPlanDay(date);
-    });
-  });
+  container.querySelectorAll('.mpp-slot-add').forEach(btn =>
+    btn.addEventListener('click', () => openMpPicker(btn.dataset.date, btn.dataset.meal)));
+  container.querySelectorAll('.mpp-slot-meal-name').forEach(el =>
+    el.addEventListener('click', () => openMpPicker(el.dataset.date, el.dataset.meal)));
+  container.querySelectorAll('.mpp-slot-x').forEach(btn =>
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const slot = getMpSlot(btn.dataset.date, btn.dataset.meal);
+      slot.mealId = null; slot.ingredientsState = [];
+      saveData(); renderMpDays();
+    }));
+  container.querySelectorAll('.mpp-ing-chip').forEach(btn =>
+    btn.addEventListener('click', e => { e.stopPropagation(); openMpIngSheet(btn.dataset.date, btn.dataset.meal); }));
 }
 
-/* ── MEAL PLANNER — RECIPES PANEL ───────────────────────── */
-function renderRecipesPanel() {
-  const list = document.getElementById('mpRecipeList');
+/* ── MEAL PICKER SHEET ───────────────────────────────────── */
+function openMpPicker(date, mealType) {
+  mpActivePicker = { date, mealType };
+  mpPickerQuery  = '';
+  const LABELS = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' };
+  const titleEl = document.getElementById('mppPickerTitle');
+  if (titleEl) titleEl.textContent = `Choose ${LABELS[mealType] || mealType}`;
+  const searchEl = document.getElementById('mppPickerSearch');
+  if (searchEl) searchEl.value = '';
+  renderMpPickerList();
+  document.getElementById('mppPickerOverlay').classList.add('mpp-open');
+  setTimeout(() => document.getElementById('mppPickerSearch')?.focus(), 320);
+}
+
+function closeMpPicker() {
+  document.getElementById('mppPickerOverlay').classList.remove('mpp-open');
+  mpActivePicker = null;
+}
+
+function renderMpPickerList() {
+  const list = document.getElementById('mppPickerList');
   if (!list) return;
-  if (!userRecipes.length) {
-    list.innerHTML = '<p class="mp-empty">No recipes yet. Add your first recipe above.</p>';
+  const q = mpPickerQuery.toLowerCase().trim();
+  const meals = userRecipes.filter(r =>
+    !q || r.name.toLowerCase().includes(q) || (r.cuisine || '').toLowerCase().includes(q));
+  if (!meals.length) {
+    list.innerHTML = `<div class="mpp-picker-empty">${q ? 'No meals found.' : 'No meals added yet. Tap "＋ New meal" below.'}</div>`;
     return;
   }
-  list.innerHTML = userRecipes.map(recipe => {
-    const ingHtml = recipe.ingredients?.length
-      ? recipe.ingredients.map(ing =>
-          `<span class="recipe-ing-chip">${escapeHtml(ing.qty ? ing.qty + (ing.unit ? ' ' + ing.unit : '') + ' ' : '')}${escapeHtml(ing.name)}</span>`
-        ).join('')
-      : '<span class="recipe-ing-chip recipe-ing-empty">No ingredients yet</span>';
-    const types = recipe.mealTypes?.length
-      ? recipe.mealTypes.map(t => `<span class="recipe-type-tag">${t}</span>`).join('')
-      : '';
-    return `<div class="recipe-card" data-recipe-id="${recipe.id}">
-      <div class="recipe-card-header">
-        <span class="recipe-card-name">${escapeHtml(recipe.name)}</span>
-        <div class="recipe-card-actions">
-          ${types}
-          <button class="recipe-edit-btn" data-id="${recipe.id}" title="Edit">✏️</button>
-          <button class="recipe-del-btn" data-id="${recipe.id}" title="Delete">🗑️</button>
-        </div>
+  const curId = mpActivePicker ? data[mpActivePicker.date]?.mealSlots?.[mpActivePicker.mealType]?.mealId : null;
+  list.innerHTML = meals.map(m => {
+    const recent = isMpMealRecent(m.id);
+    const sel    = m.id === curId;
+    const meta   = [m.cuisine, m.prepTime ? `⏱ ${m.prepTime} min` : '', `${m.ingredients?.length || 0} ing`]
+                    .filter(Boolean).join(' · ');
+    return `<div class="mpp-picker-row${recent ? ' mpp-picker-recent' : ''}${sel ? ' mpp-picker-sel' : ''}" data-id="${m.id}">
+      <div class="mpp-picker-row-info">
+        <span class="mpp-picker-name">${escapeHtml(m.name)}</span>
+        ${meta ? `<span class="mpp-picker-meta">${escapeHtml(meta)}</span>` : ''}
       </div>
-      <div class="recipe-card-ings">${ingHtml}</div>
+      ${recent ? '<span class="mpp-recent-tag">Recent</span>' : ''}
+      ${sel    ? '<span class="mpp-sel-check">✓</span>' : ''}
     </div>`;
   }).join('');
-
-  list.querySelectorAll('.recipe-edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const r = userRecipes.find(r => r.id === btn.dataset.id);
-      if (r) openRecipeModal(r);
-    });
-  });
-  list.querySelectorAll('.recipe-del-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('Delete this recipe?')) return;
-      await deleteRecipeFromFirestore(btn.dataset.id);
-      renderRecipesPanel();
-      showToast('Recipe deleted');
-    });
-  });
+  list.querySelectorAll('.mpp-picker-row').forEach(row =>
+    row.addEventListener('click', () => {
+      if (!mpActivePicker) return;
+      selectMpMeal(mpActivePicker.date, mpActivePicker.mealType, row.dataset.id);
+      closeMpPicker();
+    }));
 }
 
-/* ── MEAL PLANNER — SHOPPING PANEL ──────────────────────── */
-function buildIngredientMap() {
-  if (!mealPlanWeekStart) mealPlanWeekStart = getWeekDates(todayStr())[0];
-  const weekDates = getWeekDates(mealPlanWeekStart);
-  const MEAL_LABELS = { breakfast: '🌅 Breakfast', lunch: '☀️ Lunch', snack: '🌤️ Snack', dinner: '🌙 Dinner' };
-  const map = {};   // key: normalised name → { name, qty, unit, sources: [] }
-
-  weekDates.forEach(d => {
-    const plan = getMealPlanDay(d);
-    ['breakfast', 'lunch', 'snack', 'dinner'].forEach(meal => {
-      const mealName = plan[meal];
-      if (!mealName) return;
-      const recipe = userRecipes.find(r => r.name === mealName);
-      if (!recipe?.ingredients?.length) return;
-      const dt = dateObj(d);
-      const dayLabel = `${DAY_NAMES[dt.getDay()]} ${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].slice(0,3)}`;
-      recipe.ingredients.forEach(ing => {
-        const key = ing.name.toLowerCase().trim();
-        if (!map[key]) map[key] = { name: ing.name, qty: ing.qty || '', unit: ing.unit || '', sources: [] };
-        map[key].sources.push(`${dayLabel} ${MEAL_LABELS[meal]}`);
-      });
-    });
-  });
-  return Object.values(map);
+/* ── INGREDIENT SHEET ────────────────────────────────────── */
+function openMpIngSheet(date, mealType) {
+  mpActiveIngSlot = { date, mealType };
+  const slot    = getMpSlot(date, mealType);
+  const meal    = getMpMeal(slot.mealId);
+  const ICONS   = { breakfast: '🌅', lunch: '☀️', snack: '🌤️', dinner: '🌙' };
+  const dt      = dateObj(date);
+  const titleEl = document.getElementById('mppIngTitle');
+  if (titleEl) titleEl.textContent = `${meal?.name || 'Ingredients'} · ${DAY_NAMES[dt.getDay()]} ${ICONS[mealType] || ''}`;
+  const servEl = document.getElementById('mppIngServVal');
+  if (servEl) servEl.textContent = slot.servingsOverride ?? mpDefaultServings;
+  renderMpIngList();
+  document.getElementById('mppIngOverlay').classList.add('mpp-open');
 }
 
-function renderShoppingPanel() {
-  if (!mealPlanWeekStart) mealPlanWeekStart = getWeekDates(todayStr())[0];
-  const weekDates = getWeekDates(mealPlanWeekStart);
-  const mon = weekDates[0], sun = weekDates[6];
-  const fmt = d => { const dt = dateObj(d); return `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].slice(0,3)}`; };
-  const weekLabel = document.getElementById('mpShoppingWeek');
-  if (weekLabel) weekLabel.textContent = `Week: ${fmt(mon)} – ${fmt(sun)}`;
+function closeMpIngSheet() {
+  document.getElementById('mppIngOverlay').classList.remove('mpp-open');
+  mpActiveIngSlot = null;
+}
 
-  const ingredients = buildIngredientMap();
-  const ingList  = document.getElementById('mpIngredientsList');
-  const buyList  = document.getElementById('mpBuyList');
-  if (!ingList || !buyList) return;
-
-  if (!ingredients.length) {
-    ingList.innerHTML = '<p class="mp-empty">Plan meals with linked recipes to see ingredients here.</p>';
-    buyList.innerHTML = '';
+function renderMpIngList() {
+  const list = document.getElementById('mppIngList');
+  if (!list || !mpActiveIngSlot) return;
+  const slot = getMpSlot(mpActiveIngSlot.date, mpActiveIngSlot.mealType);
+  if (!slot.ingredientsState.length) {
+    list.innerHTML = '<div class="mpp-ing-empty">No ingredients listed for this meal.</div>';
     return;
   }
-
-  ingList.innerHTML = ingredients.map(ing => {
-    const key     = ing.name.toLowerCase().trim();
-    const checked = !!shoppingChecked[key];
-    const qtyStr  = [ing.qty, ing.unit].filter(Boolean).join(' ');
-    const src     = ing.sources.length > 1
-      ? `<span class="ing-source">${ing.sources.length} meals</span>`
-      : `<span class="ing-source">${ing.sources[0]}</span>`;
-    return `<label class="ing-row${checked ? ' ing-checked' : ''}">
-      <input type="checkbox" class="ing-cb" data-ing="${escapeHtml(key)}" ${checked ? 'checked' : ''}>
-      <span class="ing-name">${escapeHtml(ing.name)}</span>
-      ${qtyStr ? `<span class="ing-qty">${escapeHtml(qtyStr)}</span>` : ''}
-      ${src}
-    </label>`;
-  }).join('');
-
-  ingList.querySelectorAll('.ing-cb').forEach(cb => {
+  const groups = {};
+  slot.ingredientsState.forEach((ing, idx) => {
+    const cat = ing.category || 'General';
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push({ ...ing, idx });
+  });
+  list.innerHTML = Object.entries(groups).map(([cat, ings]) => `
+    <div class="mpp-ing-group">
+      <div class="mpp-ing-cat-label">${escapeHtml(cat)}</div>
+      ${ings.map(ing => `
+        <label class="mpp-ing-row${ing.checked ? ' mpp-ing-row-done' : ''}">
+          <input type="checkbox" class="mpp-ing-cb" data-idx="${ing.idx}" ${ing.checked ? 'checked' : ''}>
+          <span class="mpp-ing-name">${escapeHtml(ing.name)}</span>
+          ${ing.qty ? `<span class="mpp-ing-qty">${escapeHtml(ing.qty)}${ing.unit ? ' ' + escapeHtml(ing.unit) : ''}</span>` : ''}
+        </label>`).join('')}
+    </div>`).join('');
+  list.querySelectorAll('.mpp-ing-cb').forEach(cb =>
     cb.addEventListener('change', () => {
-      shoppingChecked[cb.dataset.ing] = cb.checked;
-      saveShoppingChecked();
-      cb.closest('label').classList.toggle('ing-checked', cb.checked);
-      renderBuyList(ingredients);
-    });
-  });
-
-  renderBuyList(ingredients);
+      getMpSlot(mpActiveIngSlot.date, mpActiveIngSlot.mealType).ingredientsState[parseInt(cb.dataset.idx)].checked = cb.checked;
+      cb.closest('label').classList.toggle('mpp-ing-row-done', cb.checked);
+      saveData(); renderMpDays();
+    }));
 }
 
-function renderBuyList(ingredients) {
-  const buyList = document.getElementById('mpBuyList');
-  if (!buyList) return;
-  const needed = ingredients.filter(ing => !shoppingChecked[ing.name.toLowerCase().trim()]);
-  if (!needed.length) {
-    buyList.innerHTML = '<p class="mp-buy-done">✅ All ingredients accounted for!</p>';
+/* ── GROCERY SHEET ───────────────────────────────────────── */
+function openMpGrocerySheet() {
+  renderMpGroceryList();
+  document.getElementById('mppGroceryOverlay').classList.add('mpp-open');
+}
+
+function closeMpGrocerySheet() {
+  document.getElementById('mppGroceryOverlay').classList.remove('mpp-open');
+}
+
+function renderMpGroceryList() {
+  const weekDates = getWeekDates(mpWeekStart || todayStr());
+  const fmt = d => { const dt = dateObj(d); return `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].slice(0,3)}`; };
+  const wl  = document.getElementById('mppGroceryWeekLabel');
+  if (wl) wl.textContent = `${fmt(weekDates[0])} – ${fmt(weekDates[6])}`;
+  const listEl = document.getElementById('mppGroceryList');
+  if (!listEl) return;
+  const items = buildMpGroceryList();
+  if (!items.length) {
+    listEl.innerHTML = '<div class="mpp-grocery-empty">✅ All ingredients at home, or no meals planned yet.</div>';
     return;
   }
-  buyList.innerHTML = needed.map(ing => {
-    const qtyStr = [ing.qty, ing.unit].filter(Boolean).join(' ');
-    return `<div class="buy-item">
-      <span class="buy-item-name">${escapeHtml(ing.name)}</span>
-      ${qtyStr ? `<span class="buy-item-qty">${escapeHtml(qtyStr)}</span>` : ''}
-    </div>`;
-  }).join('');
+  const groups = {};
+  items.forEach(item => { const c = item.category || 'General'; if (!groups[c]) groups[c] = []; groups[c].push(item); });
+  listEl.innerHTML = Object.entries(groups).map(([cat, its]) => `
+    <div class="mpp-grocery-group">
+      <div class="mpp-grocery-cat">${escapeHtml(cat)}</div>
+      ${its.map(item => `
+        <div class="mpp-grocery-row">
+          <span class="mpp-grocery-bullet">•</span>
+          <span class="mpp-grocery-name">${escapeHtml(item.name)}</span>
+          ${item.qty ? `<span class="mpp-grocery-qty">${escapeHtml(item.qty)}${item.unit ? ' ' + escapeHtml(item.unit) : ''}</span>` : ''}
+        </div>`).join('')}
+    </div>`).join('');
 }
 
-/* ── MEAL PLANNER — RECIPE MODAL ────────────────────────── */
+/* ── ORDER SHEET ─────────────────────────────────────────── */
+const MP_PROVIDERS = [
+  { name: 'Instamart',   emoji: '🟠', url: 'https://www.swiggy.com/instamart' },
+  { name: 'Zepto',       emoji: '🟣', url: 'https://zeptonow.com/' },
+  { name: 'Blinkit',     emoji: '🟡', url: 'https://blinkit.com/' },
+  { name: 'BigBasket',   emoji: '🟢', url: 'https://www.bigbasket.com/' },
+  { name: 'Amazon Fresh',emoji: '🔵', url: 'https://www.amazon.in/alm/storefront' },
+  { name: 'Amazon',      emoji: '🛒', url: 'https://www.amazon.in/s?k=groceries' },
+];
+
+function openMpOrderSheet() {
+  const list = document.getElementById('mppProviderList');
+  if (list) {
+    list.innerHTML = MP_PROVIDERS.map(p => `
+      <button class="mpp-provider-btn" data-url="${p.url}">
+        <span class="mpp-prov-emoji">${p.emoji}</span>
+        <span class="mpp-prov-name">${p.name}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>`).join('');
+    list.querySelectorAll('.mpp-provider-btn').forEach(btn =>
+      btn.addEventListener('click', () => { window.open(btn.dataset.url, '_blank', 'noopener'); closeMpOrderSheet(); }));
+  }
+  document.getElementById('mppOrderOverlay').classList.add('mpp-open');
+}
+
+function closeMpOrderSheet() {
+  document.getElementById('mppOrderOverlay').classList.remove('mpp-open');
+}
+
+function copyMpGroceryList() {
+  const items = buildMpGroceryList();
+  if (!items.length) { showToast('⚠️ Grocery list is empty'); return; }
+  const text = items.map(i => `${i.name}${i.qty ? ': ' + i.qty + (i.unit ? ' ' + i.unit : '') : ''}`).join('\n');
+  navigator.clipboard?.writeText(text).then(() => showToast('📋 Copied!')).catch(() => showToast('⚠️ Could not copy'));
+}
+
+/* ── MEAL MODAL (add / edit meal) ────────────────────────── */
 function openRecipeModal(recipe) {
   currentEditRecipeId = recipe?.id || null;
-  document.getElementById('recipeModalTitle').textContent = recipe ? 'Edit Recipe' : 'Add Recipe';
-  document.getElementById('recipeName').value = recipe?.name || '';
-
-  document.querySelectorAll('.recipe-type-cb').forEach(cb => {
-    cb.checked = !!(recipe?.mealTypes?.includes(cb.value));
-  });
-
+  mpRecipeServings    = recipe?.defaultServings || 2;
+  document.getElementById('recipeModalTitle').textContent = recipe ? 'Edit Meal' : 'Add Meal';
+  document.getElementById('recipeName').value    = recipe?.name     || '';
+  document.getElementById('recipeCuisine').value = recipe?.cuisine  || '';
+  document.getElementById('recipePrepTime').value= recipe?.prepTime || '';
+  document.getElementById('recipeServVal').textContent = mpRecipeServings;
   const rows = document.getElementById('recipeIngredientRows');
   rows.innerHTML = '';
-  (recipe?.ingredients || [{ name: '', qty: '', unit: '' }]).forEach(ing => addIngredientRow(ing));
-
+  (recipe?.ingredients || [{ name: '', qty: '', unit: '', category: '' }]).forEach(ing => addIngredientRow(ing));
   document.getElementById('recipeModal').style.display = 'flex';
   setTimeout(() => document.getElementById('recipeName').focus(), 50);
 }
 
-function addIngredientRow(ing = { name: '', qty: '', unit: '' }) {
+function addIngredientRow(ing = { name: '', qty: '', unit: '', category: '' }) {
   const rows = document.getElementById('recipeIngredientRows');
   const div  = document.createElement('div');
   div.className = 'ing-row-edit';
   div.innerHTML = `
-    <input type="text" class="ing-input ing-name-input" placeholder="Ingredient name" value="${escapeHtml(ing.name)}" maxlength="60">
-    <input type="text" class="ing-input ing-qty-input" placeholder="Qty" value="${escapeHtml(ing.qty||'')}" style="width:56px">
-    <input type="text" class="ing-input ing-unit-input" placeholder="Unit" value="${escapeHtml(ing.unit||'')}" style="width:64px">
+    <input type="text"   class="ing-input ing-name-input"     placeholder="Ingredient"  value="${escapeHtml(ing.name)}"            maxlength="60">
+    <input type="text"   class="ing-input ing-qty-input"      placeholder="Qty"         value="${escapeHtml(ing.qty  || '')}"       style="width:52px">
+    <input type="text"   class="ing-input ing-unit-input"     placeholder="Unit"        value="${escapeHtml(ing.unit || '')}"       style="width:60px">
+    <input type="text"   class="ing-input ing-cat-input"      placeholder="Category"    value="${escapeHtml(ing.category || '')}"   style="width:90px">
     <button class="ing-remove-btn" title="Remove">✕</button>`;
   div.querySelector('.ing-remove-btn').addEventListener('click', () => div.remove());
   rows.appendChild(div);
@@ -1185,21 +1275,20 @@ function addIngredientRow(ing = { name: '', qty: '', unit: '' }) {
 
 async function saveRecipeModal() {
   const name = document.getElementById('recipeName').value.trim();
-  if (!name) { showToast('⚠️ Recipe name required'); return; }
-
-  const mealTypes = [...document.querySelectorAll('.recipe-type-cb:checked')].map(cb => cb.value);
-
+  if (!name) { showToast('⚠️ Meal name required'); return; }
+  const cuisine    = document.getElementById('recipeCuisine').value.trim();
+  const prepTime   = parseInt(document.getElementById('recipePrepTime').value) || null;
+  const defServings = mpRecipeServings;
   const ingredients = [...document.getElementById('recipeIngredientRows').querySelectorAll('.ing-row-edit')]
     .map(row => ({
-      name: row.querySelector('.ing-name-input').value.trim(),
-      qty:  row.querySelector('.ing-qty-input').value.trim(),
-      unit: row.querySelector('.ing-unit-input').value.trim(),
+      name:     row.querySelector('.ing-name-input').value.trim(),
+      qty:      row.querySelector('.ing-qty-input').value.trim(),
+      unit:     row.querySelector('.ing-unit-input').value.trim(),
+      category: row.querySelector('.ing-cat-input').value.trim() || 'General',
     }))
     .filter(ing => ing.name);
-
-  const recipe = { name, mealTypes, ingredients };
+  const recipe = { name, cuisine, prepTime, defaultServings: defServings, ingredients };
   if (currentEditRecipeId) recipe.id = currentEditRecipeId;
-
   const savedId = await saveRecipeToFirestore(recipe);
   if (currentEditRecipeId) {
     const idx = userRecipes.findIndex(r => r.id === currentEditRecipeId);
@@ -1208,14 +1297,11 @@ async function saveRecipeModal() {
     userRecipes.push({ ...recipe, id: savedId });
     userRecipes.sort((a, b) => a.name.localeCompare(b.name));
   }
-
   document.getElementById('recipeModal').style.display = 'none';
-  renderRecipesPanel();
-  showToast(`✅ Recipe "${name}" saved`);
+  showToast(`✅ "${name}" saved`);
 }
 
-/* ── MEAL PLANNER — LEGACY renderMealPlanner alias ─────── */
-function renderMealPlanner() { renderMealPlanPanel(); }
+function renderMealPlanner() { renderMealPlannerV2(); }
 
 /* ── DAILY TRACKER RENDER ───────────────────────────────── */
 function renderDailyTracker() {
@@ -2037,43 +2123,73 @@ function init() {
     });
   });
 
-  /* Meal planner — inner tabs */
-  document.querySelectorAll('.mp-itab').forEach(btn => {
-    btn.addEventListener('click', () => switchMealTab(btn.dataset.mptab));
+  /* Meal planner v2 — week navigation */
+  mpWeekStart = getWeekDates(todayStr())[0];
+  document.getElementById('mppPrevWeek').addEventListener('click', () => {
+    mpWeekStart = offsetDate(mpWeekStart, -7);
+    renderMealPlannerV2();
+  });
+  document.getElementById('mppNextWeek').addEventListener('click', () => {
+    const todayMon = getWeekDates(todayStr())[0];
+    if (mpWeekStart < todayMon) { mpWeekStart = offsetDate(mpWeekStart, 7); renderMealPlannerV2(); }
   });
 
-  /* Meal planner — week navigation */
-  mealPlanWeekStart = getWeekDates(todayStr())[0];
-  document.getElementById('mpPrevWeek').addEventListener('click', () => {
-    mealPlanWeekStart = offsetDate(mealPlanWeekStart, -7);
-    renderMealPlanPanel();
-    if (activeMealTab === 'shopping') renderShoppingPanel();
+  /* Meal planner v2 — servings */
+  document.getElementById('mppServingsDown').addEventListener('click', () => {
+    if (mpDefaultServings > 1) { mpDefaultServings--; document.getElementById('mppServingsVal').textContent = mpDefaultServings; }
   });
-  document.getElementById('mpNextWeek').addEventListener('click', () => {
-    const todayWeekMon = getWeekDates(todayStr())[0];
-    if (mealPlanWeekStart < todayWeekMon) {
-      mealPlanWeekStart = offsetDate(mealPlanWeekStart, 7);
-      renderMealPlanPanel();
-      if (activeMealTab === 'shopping') renderShoppingPanel();
-    }
+  document.getElementById('mppServingsUp').addEventListener('click', () => {
+    if (mpDefaultServings < 20) { mpDefaultServings++; document.getElementById('mppServingsVal').textContent = mpDefaultServings; }
   });
 
-  /* Recipe modal */
-  document.getElementById('addRecipeBtn').addEventListener('click', () => openRecipeModal(null));
+  /* Meal planner v2 — grocery sheet */
+  document.getElementById('mppGroceryBtn').addEventListener('click', openMpGrocerySheet);
+  document.getElementById('mppGroceryClose').addEventListener('click', closeMpGrocerySheet);
+  document.getElementById('mppGroceryOverlay').addEventListener('click', e => { if (e.target.id === 'mppGroceryOverlay') closeMpGrocerySheet(); });
+
+  /* Meal planner v2 — order sheet */
+  document.getElementById('mppOrderBtn').addEventListener('click', openMpOrderSheet);
+  document.getElementById('mppOrderClose').addEventListener('click', closeMpOrderSheet);
+  document.getElementById('mppOrderOverlay').addEventListener('click', e => { if (e.target.id === 'mppOrderOverlay') closeMpOrderSheet(); });
+  document.getElementById('mppCopyListBtn').addEventListener('click', copyMpGroceryList);
+
+  /* Meal planner v2 — picker sheet */
+  document.getElementById('mppPickerClose').addEventListener('click', closeMpPicker);
+  document.getElementById('mppPickerOverlay').addEventListener('click', e => { if (e.target.id === 'mppPickerOverlay') closeMpPicker(); });
+  document.getElementById('mppPickerSearch').addEventListener('input', e => { mpPickerQuery = e.target.value; renderMpPickerList(); });
+  document.getElementById('mppAddMealFromPicker').addEventListener('click', () => { closeMpPicker(); openRecipeModal(null); });
+
+  /* Meal planner v2 — ingredient sheet */
+  document.getElementById('mppIngClose').addEventListener('click', closeMpIngSheet);
+  document.getElementById('mppIngOverlay').addEventListener('click', e => { if (e.target.id === 'mppIngOverlay') closeMpIngSheet(); });
+  document.getElementById('mppIngServDown').addEventListener('click', () => {
+    if (!mpActiveIngSlot) return;
+    const slot = getMpSlot(mpActiveIngSlot.date, mpActiveIngSlot.mealType);
+    const cur = slot.servingsOverride ?? mpDefaultServings;
+    if (cur > 1) { slot.servingsOverride = cur - 1; rescaleMpIngredients(mpActiveIngSlot.date, mpActiveIngSlot.mealType); document.getElementById('mppIngServVal').textContent = slot.servingsOverride; renderMpIngList(); saveData(); }
+  });
+  document.getElementById('mppIngServUp').addEventListener('click', () => {
+    if (!mpActiveIngSlot) return;
+    const slot = getMpSlot(mpActiveIngSlot.date, mpActiveIngSlot.mealType);
+    const cur = slot.servingsOverride ?? mpDefaultServings;
+    if (cur < 20) { slot.servingsOverride = cur + 1; rescaleMpIngredients(mpActiveIngSlot.date, mpActiveIngSlot.mealType); document.getElementById('mppIngServVal').textContent = slot.servingsOverride; renderMpIngList(); saveData(); }
+  });
+
+  /* Meal planner v2 — manage meals */
+  document.getElementById('mppManageMealsBtn').addEventListener('click', () => openRecipeModal(null));
+
+  /* Meal modal */
   document.getElementById('addIngredientRowBtn').addEventListener('click', () => addIngredientRow());
   document.getElementById('recipeSaveBtn').addEventListener('click', saveRecipeModal);
-  document.getElementById('recipeCancelBtn').addEventListener('click', () => {
-    document.getElementById('recipeModal').style.display = 'none';
-  });
-  document.getElementById('recipeModal').addEventListener('click', e => {
-    if (e.target.id === 'recipeModal') document.getElementById('recipeModal').style.display = 'none';
-  });
+  document.getElementById('recipeCancelBtn').addEventListener('click', () => { document.getElementById('recipeModal').style.display = 'none'; });
+  document.getElementById('recipeModal').addEventListener('click', e => { if (e.target.id === 'recipeModal') document.getElementById('recipeModal').style.display = 'none'; });
 
-  /* Shopping list — clear checked */
-  document.getElementById('clearShoppingBtn').addEventListener('click', () => {
-    shoppingChecked = {};
-    saveShoppingChecked();
-    renderShoppingPanel();
+  /* Meal modal — servings stepper */
+  document.getElementById('recipeServDown').addEventListener('click', () => {
+    if (mpRecipeServings > 1) { mpRecipeServings--; document.getElementById('recipeServVal').textContent = mpRecipeServings; }
+  });
+  document.getElementById('recipeServUp').addEventListener('click', () => {
+    if (mpRecipeServings < 20) { mpRecipeServings++; document.getElementById('recipeServVal').textContent = mpRecipeServings; }
   });
 
   /* Reading Habits events */
