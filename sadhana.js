@@ -7,20 +7,20 @@ const PRACTICES = [
   { id: 'guru_pooja',          name: 'Guru Pooja',                      icon: '🪔', desc: 'An invitation to the Divine' },
   { id: 'upa_yoga',            name: 'Upa Yoga',                        icon: '🌀', desc: '' },
   { id: 'yoga_namaskar',       name: 'Yoga Namaskar',                   icon: '🧘', desc: '' },
-  { id: 'surya_kriya',         name: 'Surya Kriya',                     icon: '☀️', desc: '', extra: { id: 'surya_kriya_cycles', label: 'Cycles' } },
+  { id: 'surya_kriya',         name: 'Surya Kriya',                     icon: '☀️', desc: '', extra: [{ id: 'surya_kriya_cycles', label: 'Cycles' }, { id: 'surya_kriya_mins', label: 'Total mins' }] },
   { id: 'asanas',              name: 'Asanas',                          icon: '🤸', desc: '' },
-  { id: 'sck_morning',         name: 'Shakti Chalana Kriya (Morning)',  icon: '⚡', desc: '', extra: { id: 'sck_morning_kapalabhatis', label: 'Kapalabhatis / cycle' } },
+  { id: 'sck_morning',         name: 'Shakti Chalana Kriya (Morning)',  icon: '⚡', desc: '', extra: [{ id: 'sck_morning_kapalabhatis', label: 'Kapalabhatis / cycle' }] },
   { id: 'shambhavi_morning',   name: 'Shambhavi (Morning)',             icon: '🌅', desc: '' },
   { id: 'shoonya_mid',         name: 'Shoonya (Mid Morning)',           icon: '🌌', desc: '' },
-  { id: 'miracle_of_mind',     name: 'Miracle of Mind',                 icon: '🧠', desc: '', extra: { id: 'miracle_of_mind_mins', label: 'Minutes' } },
-  { id: 'devi_stuti',          name: 'Devi Stuti',                      icon: '🌸', desc: '', extra: { id: 'devi_stuti_cycles', label: 'Cycles' } },
+  { id: 'miracle_of_mind',     name: 'Miracle of Mind',                 icon: '🧠', desc: '', extra: [{ id: 'miracle_of_mind_mins', label: 'Minutes' }] },
+  { id: 'devi_stuti',          name: 'Devi Stuti',                      icon: '🌸', desc: '', extra: [{ id: 'devi_stuti_cycles', label: 'Cycles' }] },
   { id: 'achala_arpanam',      name: 'Achala Arpanam',                  icon: '🏔️', desc: '' },
   { id: 'infinity_meditation', name: 'Infinity Meditation',             icon: '♾️', desc: '' },
   { id: 'sukha_kriya',         name: 'Sukha Kriya',                     icon: '😌', desc: '' },
   { id: 'aum_chanting',        name: 'Aum Chanting',                    icon: '🔔', desc: '' },
   { id: 'nadi_shuddhi',        name: 'Nadi Shuddhi',                    icon: '🌬️', desc: '' },
   { id: 'shoonya_evening',     name: 'Shoonya (Evening)',               icon: '🌙', desc: '' },
-  { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: '', extra: { id: 'sck_evening_kapalabhatis', label: 'Kapalabhatis / cycle' } },
+  { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: '', extra: [{ id: 'sck_evening_kapalabhatis', label: 'Kapalabhatis / cycle' }] },
   { id: 'shambhavi_evening',   name: 'Shambhavi (Evening)',             icon: '🌅', desc: '' },
 ];
 
@@ -71,10 +71,9 @@ function showLogin(on) {
 
 /* ── DATA LAYER ──────────────────────────────────────────── */
 function defaultSadhana() {
-  return {
-    ...Object.fromEntries(PRACTICES.map(p => [p.id, false])),
-    ...Object.fromEntries(PRACTICES.filter(p => p.extra).map(p => [p.extra.id, 0]))
-  };
+  const s = Object.fromEntries(PRACTICES.map(p => [p.id, false]));
+  PRACTICES.forEach(p => (p.extra || []).forEach(e => { s[e.id] = 0; }));
+  return s;
 }
 
 function getDayData(dateStr) {
@@ -118,10 +117,10 @@ function renderPracticeList() {
         <div>
           <div class="practice-name">${p.name}</div>
           ${p.desc ? `<div class="practice-desc">${p.desc}</div>` : ''}
-          ${p.extra ? `<div class="practice-extra">
-            <input type="number" class="practice-num practice-extra-inp" data-extra="${p.extra.id}" placeholder="0" min="0">
-            <span class="practice-extra-label">${p.extra.label}</span>
-          </div>` : ''}
+          ${(p.extra || []).map(e => `<div class="practice-extra">
+            <input type="number" class="practice-num practice-extra-inp" data-extra="${e.id}" placeholder="0" min="0">
+            <span class="practice-extra-label">${e.label}</span>
+          </div>`).join('')}
         </div>
       </div>
       <label class="toggle">
@@ -172,6 +171,130 @@ function updateBanner() {
   const s   = getDayData(currentDate).sadhana;
   const all = PRACTICES.every(p => s[p.id]);
   document.getElementById('completionBanner').style.display = all ? 'block' : 'none';
+}
+
+/* ── RENDER — ANALYTICS ──────────────────────────────────── */
+function renderAnalytics() {
+  const el = document.getElementById('analyticsContent');
+  if (!el) return;
+  const today = todayStr();
+
+  function daysRange(n, offset = 0) {
+    return Array.from({ length: n }, (_, i) => offsetDate(today, -(i + offset)));
+  }
+  function avg(vals) {
+    const v = vals.filter(x => x > 0);
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
+  }
+  function fmt(n, unit = '') {
+    return n > 0 ? `${Number.isInteger(n) ? n : n.toFixed(1)}${unit ? ' ' + unit : ''}` : '—';
+  }
+  function diffLabel(diff) {
+    if (diff === null || diff === 0) return { txt: '—', cls: '' };
+    const sign = diff > 0 ? '↑' : '↓';
+    const abs  = Math.abs(Number.isInteger(diff) ? diff : parseFloat(diff.toFixed(1)));
+    return { txt: `${sign} ${abs}`, cls: diff > 0 ? 'stat-up' : 'stat-down' };
+  }
+
+  /* ── Time-tracked practice minutes ── */
+  function dayTotalMins(d) {
+    const s = data[d]?.sadhana || {};
+    return (parseInt(s.miracle_of_mind_mins) || 0) + (parseInt(s.surya_kriya_mins) || 0);
+  }
+  const totalToday = dayTotalMins(today);
+  const avgWeekMins  = avg(daysRange(7).map(dayTotalMins));
+  const avgMonthMins = avg(daysRange(30).map(dayTotalMins));
+
+  /* ── Surya Kriya ── */
+  function suryaPerCycle(d) {
+    const s = data[d]?.sadhana || {};
+    const c = parseInt(s.surya_kriya_cycles) || 0;
+    const m = parseInt(s.surya_kriya_mins)   || 0;
+    return c > 0 && m > 0 ? m / c : 0;
+  }
+  const suryaCyclesToday = parseInt(data[today]?.sadhana?.surya_kriya_cycles) || 0;
+  const suryaAvgCyclesWeek = avg(daysRange(7).map(d => parseInt(data[d]?.sadhana?.surya_kriya_cycles) || 0));
+  const suryaAvgCyclesMonth = avg(daysRange(30).map(d => parseInt(data[d]?.sadhana?.surya_kriya_cycles) || 0));
+  const suryaTimeThis  = avg(daysRange(7).map(suryaPerCycle));
+  const suryaTimePrev  = avg(daysRange(7, 7).map(suryaPerCycle));
+  const suryaTimeDiff  = suryaTimeThis > 0 && suryaTimePrev > 0 ? suryaTimeThis - suryaTimePrev : null;
+
+  /* ── SCK Kapalabhatis ── */
+  function sckVal(d) { return parseInt(data[d]?.sadhana?.sck_morning_kapalabhatis) || 0; }
+  const sckToday    = sckVal(today);
+  const sckAvgThis  = avg(daysRange(7).map(sckVal));
+  const sckAvgPrev  = avg(daysRange(7, 7).map(sckVal));
+  const sckDiff     = sckAvgThis > 0 && sckAvgPrev > 0 ? sckAvgThis - sckAvgPrev : null;
+
+  /* ── Miracle of Mind ── */
+  function momVal(d) { return parseInt(data[d]?.sadhana?.miracle_of_mind_mins) || 0; }
+  const momToday     = momVal(today);
+  const momAvgWeek   = avg(daysRange(7).map(momVal));
+  const momAvgMonth  = avg(daysRange(30).map(momVal));
+
+  /* ── Devi Stuti ── */
+  function deviVal(d) { return parseInt(data[d]?.sadhana?.devi_stuti_cycles) || 0; }
+  const deviToday    = deviVal(today);
+  const deviAvgWeek  = avg(daysRange(7).map(deviVal));
+  const deviAvgMonth = avg(daysRange(30).map(deviVal));
+
+  const suryaTimeDiffLbl = diffLabel(suryaTimeDiff !== null ? parseFloat(suryaTimeDiff.toFixed(1)) : null);
+  const sckDiffLbl       = diffLabel(sckDiff !== null ? Math.round(sckDiff) : null);
+
+  el.innerHTML = `
+    <div class="analytics-section">
+      <div class="analytics-section-title">⏱️ Total Practice Time</div>
+      <div class="analytics-grid">
+        <div class="stat-card"><div class="stat-value">${fmt(totalToday, 'min')}</div><div class="stat-label">Today</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(avgWeekMins), 'min')}</div><div class="stat-label">Avg — past week</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(avgMonthMins), 'min')}</div><div class="stat-label">Avg — past month</div></div>
+      </div>
+    </div>
+
+    <div class="analytics-section">
+      <div class="analytics-section-title">☀️ Surya Kriya</div>
+      <div class="analytics-grid">
+        <div class="stat-card"><div class="stat-value">${fmt(suryaCyclesToday)}</div><div class="stat-label">Cycles today</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(suryaAvgCyclesWeek.toFixed(1)))}</div><div class="stat-label">Avg cycles — week</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(suryaAvgCyclesMonth.toFixed(1)))}</div><div class="stat-label">Avg cycles — month</div></div>
+      </div>
+      <div class="analytics-improvement">
+        <span class="improvement-label">Time per cycle vs last week</span>
+        <span class="improvement-value ${suryaTimeDiffLbl.cls}">${suryaTimeDiffLbl.txt !== '—' ? suryaTimeDiffLbl.txt + ' min' : '—'}</span>
+      </div>
+    </div>
+
+    <div class="analytics-section">
+      <div class="analytics-section-title">⚡ Shakti Chalana Kriya</div>
+      <div class="analytics-grid">
+        <div class="stat-card"><div class="stat-value">${fmt(sckToday)}</div><div class="stat-label">Kapalabhatis today</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(sckAvgThis))}</div><div class="stat-label">Avg — past week</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(avg(daysRange(30).map(sckVal))))}</div><div class="stat-label">Avg — past month</div></div>
+      </div>
+      <div class="analytics-improvement">
+        <span class="improvement-label">Kapalabhatis/cycle vs last week</span>
+        <span class="improvement-value ${sckDiffLbl.cls}">${sckDiffLbl.txt}</span>
+      </div>
+    </div>
+
+    <div class="analytics-section">
+      <div class="analytics-section-title">🧠 Miracle of Mind</div>
+      <div class="analytics-grid">
+        <div class="stat-card"><div class="stat-value">${fmt(momToday, 'min')}</div><div class="stat-label">Today</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(momAvgWeek), 'min')}</div><div class="stat-label">Avg — past week</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(Math.round(momAvgMonth), 'min')}</div><div class="stat-label">Avg — past month</div></div>
+      </div>
+    </div>
+
+    <div class="analytics-section">
+      <div class="analytics-section-title">🌸 Devi Stuti</div>
+      <div class="analytics-grid">
+        <div class="stat-card"><div class="stat-value">${fmt(deviToday)}</div><div class="stat-label">Cycles today</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(deviAvgWeek.toFixed(1)))}</div><div class="stat-label">Avg — past week</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(parseFloat(deviAvgMonth.toFixed(1)))}</div><div class="stat-label">Avg — past month</div></div>
+      </div>
+    </div>
+  `;
 }
 
 /* ── RENDER — TRENDS ─────────────────────────────────────── */
@@ -252,7 +375,8 @@ function switchView(viewName) {
   const nav  = document.querySelector(`.nav-item[data-view="${viewName}"]`);
   if (view) view.classList.add('active');
   if (nav)  nav.classList.add('active');
-  if (viewName === 'trends') renderTrends();
+  if (viewName === 'trends')    renderTrends();
+  if (viewName === 'analytics') renderAnalytics();
 }
 
 /* ── SIDEBAR (mobile drawer) ─────────────────────────────── */
@@ -333,6 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderDateHeader();
       renderSadhana();
       renderTrends();
+      renderAnalytics();
       showLoading(false);
     } else {
       currentUser = null;
