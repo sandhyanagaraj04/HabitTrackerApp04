@@ -338,12 +338,17 @@ const DEFAULT_HEALTH_HABITS = [
 
 async function loadHealthHabits() {
   if (!currentUser) return;
-  const snap = await db.collection('users').doc(currentUser.uid)
-    .collection('healthHabits').orderBy('order').get();
-  if (snap.empty) {
-    await seedDefaultHealthHabits();
-  } else {
-    userHealthHabits = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid)
+      .collection('healthHabits').orderBy('order').get();
+    if (snap.empty) {
+      await seedDefaultHealthHabits();
+    } else {
+      userHealthHabits = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+  } catch (err) {
+    console.error('loadHealthHabits error:', err);
+    if (!userHealthHabits.length) userHealthHabits = DEFAULT_HEALTH_HABITS.map(h => ({ ...h }));
   }
 }
 
@@ -1712,10 +1717,6 @@ function closeSidebar() {
   const overlay = document.getElementById('sidebarOverlay');
   sidebar.classList.remove('sidebar-open');
   overlay.classList.remove('sidebar-open');
-}
-
-function closeSidebar() {
-  /* no-op — sidebar stays visible; overlay only closes via toggleSidebar */
 }
 
 /* ── EVENT HANDLERS — HEALTH ────────────────────────────── */
