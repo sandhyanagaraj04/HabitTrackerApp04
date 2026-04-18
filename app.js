@@ -30,6 +30,15 @@ let currentDate = todayStr();
 let data        = {};        // in-memory cache: { [dateStr]: dayObject }
 let saveTimer   = null;      // debounce handle for Firestore writes
 
+let mealOptions = {
+  breakfast: ['Oats & Banana', 'Poha', 'Idli & Sambar', 'Dosa', 'Paratha', 'Bread & Eggs'],
+  lunch:     ['Rice & Dal', 'Roti & Sabzi', 'Salad Bowl', 'Pulao', 'Biryani'],
+  snack:     ['Fruits', 'Nuts & Seeds', 'Tea & Biscuits', 'Yogurt', 'Protein Bar'],
+  dinner:    ['Chapati & Sabzi', 'Rice & Curry', 'Khichdi', 'Dal & Rice', 'Soup & Salad']
+};
+let mealPlanWeekStart   = null;
+let pendingAddMealType  = null;
+
 /* ── UTILITY — DATE ─────────────────────────────────────── */
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -95,7 +104,8 @@ function defaultDay() {
       guru_pooja: false, upa_yoga: false,
       surya_kriya: false, yoga_namaskar: false, sck: false
     },
-    t: {}
+    t: {},
+    plan: { breakfast: '', lunch: '', snack: '', dinner: '' }
   };
 }
 
@@ -126,17 +136,52 @@ async function loadAllData() {
   if (!FIREBASE_CONFIGURED) {
     try { data = JSON.parse(localStorage.getItem('habitTracker_v1') || '{}'); }
     catch { data = {}; }
+    try {
+      const stored = JSON.parse(localStorage.getItem('habitTracker_mealOptions') || 'null');
+      if (stored) mealOptions = { ...mealOptions, ...stored };
+    } catch {}
     return;
   }
   try {
-    const snap = await db.collection('users').doc(currentUser.uid)
-                         .collection('days').get();
+    const [snap, userDoc] = await Promise.all([
+      db.collection('users').doc(currentUser.uid).collection('days').get(),
+      db.collection('users').doc(currentUser.uid).get()
+    ]);
     data = {};
     snap.forEach(doc => { data[doc.id] = doc.data(); });
+    if (userDoc.exists && userDoc.data().mealOptions) {
+      mealOptions = { ...mealOptions, ...userDoc.data().mealOptions };
+    }
   } catch (err) {
     console.error('Firestore load error:', err);
     data = {};
   }
+}
+
+/* ── MEAL OPTIONS SAVE ──────────────────────────────────── */
+function saveMealOptions() {
+  if (!currentUser) return;
+  if (!FIREBASE_CONFIGURED) {
+    localStorage.setItem('habitTracker_mealOptions', JSON.stringify(mealOptions));
+    return;
+  }
+  db.collection('users').doc(currentUser.uid)
+    .set({ mealOptions }, { merge: true })
+    .catch(err => console.error('Meal options save error:', err));
+}
+
+/* ── MEAL PLAN DAY SAVE ─────────────────────────────────── */
+function saveMealPlanDay(dateStr) {
+  if (!currentUser) return;
+  if (!FIREBASE_CONFIGURED) {
+    localStorage.setItem('habitTracker_v1', JSON.stringify(data));
+    return;
+  }
+  const dayData = data[dateStr] || defaultDay();
+  db.collection('users').doc(currentUser.uid)
+    .collection('days').doc(dateStr)
+    .set(dayData, { merge: true })
+    .catch(err => console.error('Meal plan save error:', err));
 }
 
 /* ── COMPLETENESS ───────────────────────────────────────── */
@@ -300,6 +345,170 @@ function updateComputed() {
   document.getElementById('stepsGoalPct').textContent     = stepsPct + '%';
 }
 
+/* ── PLANNER — STREAK HELPERS ───────────────────────────── */
+function calcHabitStreak(checker) {
+  let streak = 0;
+  let d = todayStr();
+  while (checker(d)) { streak++; d = offsetDate(d, -1); }
+  return streak;
+}
+
+function getLast7Dots(checker) {
+  const today = todayStr();
+  return Array.from({ length: 7 }, (_, i) => checker(offsetDate(today, i - 6)));
+}
+
+function setHabitCard(key, streak, dots) {
+  const streakEl = document.getElementById(`hstreak-${key}`);
+  const dotsEl   = document.getElementById(`hdots-${key}`);
+  if (streakEl) streakEl.textContent = streak > 0 ? `🔥 ${streak}` : '—';
+  if (dotsEl) {
+    const today = todayStr();
+    dotsEl.innerHTML = dots.map((done, i) => {
+      const d  = offsetDate(today, i - 6);
+      const dt = dateObj(d);
+      return `<span class="habit-dot${done ? ' done' : ''}" title="${DAY_NAMES[dt.getDay()]} ${dt.getDate()}"></span>`;
+    }).join('');
+  }
+}
+
+/* ── PLANNER RENDER ─────────────────────────────────────── */
+function renderPlanner() {
+  const HEALTH_HABITS = [
+    { key: 'sleep',    check: d => !!(data[d]?.health?.sleep_time && data[d]?.health?.wake_time) },
+    { key: 'phone',    check: d => !!(data[d]?.health?.greyscale_on) },
+    { key: 'activity', check: d => (parseInt(data[d]?.health?.steps) || 0) > 0 },
+    { key: 'meals',    check: d => !!(data[d]?.health?.breakfast || data[d]?.health?.lunch || data[d]?.health?.dinner) }
+  ];
+
+  const SADHANA_PRACTICES = ['guru_pooja', 'upa_yoga', 'surya_kriya', 'yoga_namaskar', 'sck'];
+
+  HEALTH_HABITS.forEach(({ key, check }) => {
+    setHabitCard(key, calcHabitStreak(check), getLast7Dots(check));
+  });
+
+  const healthSectionStreak = calcHabitStreak(d => {
+    const h = data[d]?.health || {};
+    return !!(h.sleep_time || (parseInt(h.steps) || 0) > 0 || h.breakfast || h.lunch || h.dinner);
+  });
+  const psh = document.getElementById('pstreak-health');
+  if (psh) psh.textContent = healthSectionStreak > 0 ? `🔥 ${healthSectionStreak}` : '';
+
+  SADHANA_PRACTICES.forEach(p => {
+    const check = d => !!(data[d]?.sadhana?.[p]);
+    setHabitCard(p, calcHabitStreak(check), getLast7Dots(check));
+  });
+
+  const sadhanaSectionStreak = calcHabitStreak(d => {
+    const s = data[d]?.sadhana || {};
+    return Object.values(s).some(Boolean);
+  });
+  const pss = document.getElementById('pstreak-sadhana');
+  if (pss) pss.textContent = sadhanaSectionStreak > 0 ? `🔥 ${sadhanaSectionStreak}` : '';
+}
+
+/* ── MEAL PLANNER RENDER ────────────────────────────────── */
+function getMealPlanDay(dateStr) {
+  if (!data[dateStr]) data[dateStr] = defaultDay();
+  if (!data[dateStr].plan) data[dateStr].plan = { breakfast: '', lunch: '', snack: '', dinner: '' };
+  return data[dateStr].plan;
+}
+
+function renderMealSelect(date, meal, icon, currentVal) {
+  const labels = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' };
+  const opts   = (mealOptions[meal] || [])
+    .map(o => `<option value="${o.replace(/"/g,'&quot;')}"${currentVal === o ? ' selected' : ''}>${o}</option>`)
+    .join('');
+  return `<div class="mp-meal-row">
+    <span class="mp-meal-icon">${icon}</span>
+    <select class="input-select mp-meal-select" data-date="${date}" data-meal="${meal}">
+      <option value="">— ${labels[meal]} —</option>
+      ${opts}
+      <option value="__add__">＋ Add option…</option>
+    </select>
+  </div>`;
+}
+
+function renderMealPlanner() {
+  if (!mealPlanWeekStart) mealPlanWeekStart = getWeekDates(todayStr())[0];
+
+  const weekDates  = getWeekDates(mealPlanWeekStart);
+  const todayWeekMon = getWeekDates(todayStr())[0];
+  const mon = weekDates[0];
+  const sun = weekDates[6];
+
+  // Week label
+  const fmt = d => {
+    const dt = dateObj(d);
+    return `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].slice(0,3)}`;
+  };
+  document.getElementById('mpWeekLabel').textContent = `${fmt(mon)} – ${fmt(sun)}`;
+  document.getElementById('mpNextWeek').disabled = mon >= todayWeekMon;
+
+  const MEAL_ICONS = { breakfast: '🌅', lunch: '☀️', snack: '🌤️', dinner: '🌙' };
+  const container  = document.getElementById('mpDays');
+
+  container.innerHTML = weekDates.map(d => {
+    const dt   = dateObj(d);
+    const plan = getMealPlanDay(d);
+    const isT  = isToday(d);
+    return `<div class="mp-day-card${isT ? ' mp-today' : ''}" data-date="${d}">
+      <div class="mp-day-header">
+        <span class="mp-day-name">${DAY_NAMES[dt.getDay()]}</span>
+        <span class="mp-day-date">${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].slice(0,3)}</span>
+        ${isT ? '<span class="mp-today-badge">Today</span>' : ''}
+      </div>
+      <div class="mp-meals">
+        ${renderMealSelect(d, 'breakfast', MEAL_ICONS.breakfast, plan.breakfast)}
+        ${renderMealSelect(d, 'lunch',     MEAL_ICONS.lunch,     plan.lunch)}
+        ${renderMealSelect(d, 'snack',     MEAL_ICONS.snack,     plan.snack)}
+        ${renderMealSelect(d, 'dinner',    MEAL_ICONS.dinner,    plan.dinner)}
+      </div>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.mp-meal-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const { date, meal } = sel.dataset;
+      if (sel.value === '__add__') {
+        sel.value = getMealPlanDay(date)[meal] || '';
+        showAddOptionModal(meal);
+        return;
+      }
+      getMealPlanDay(date)[meal] = sel.value;
+      saveMealPlanDay(date);
+    });
+  });
+}
+
+/* ── ADD MEAL OPTION MODAL ──────────────────────────────── */
+function showAddOptionModal(mealType) {
+  pendingAddMealType = mealType;
+  const labels = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' };
+  document.getElementById('addOptionMealType').textContent = labels[mealType] || mealType;
+  document.getElementById('addOptionInput').value = '';
+  document.getElementById('addOptionOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('addOptionInput').focus(), 50);
+}
+
+function hideAddOptionModal() {
+  document.getElementById('addOptionOverlay').style.display = 'none';
+  pendingAddMealType = null;
+}
+
+function confirmAddOption() {
+  const val = document.getElementById('addOptionInput').value.trim();
+  if (!val) { showToast('⚠️ Please enter an option name'); return; }
+  if (!mealOptions[pendingAddMealType].includes(val)) {
+    mealOptions[pendingAddMealType].push(val);
+    saveMealOptions();
+  }
+  const mealType = pendingAddMealType;
+  hideAddOptionModal();
+  renderMealPlanner();
+  showToast(`✅ Added "${val}" to ${mealType} options`);
+}
+
 /* ── FULL RENDER ────────────────────────────────────────── */
 function renderAll() {
   renderHeader();
@@ -307,6 +516,8 @@ function renderAll() {
   renderSadhana();
   renderBadges();
   updateExportSummary();
+  renderPlanner();
+  renderMealPlanner();
 }
 
 /* ── NAVIGATION ─────────────────────────────────────────── */
@@ -613,6 +824,39 @@ function init() {
   document.getElementById('categoryTabs').addEventListener('click', e => {
     const tab = e.target.closest('[data-tab]');
     if (tab) switchTab(tab.dataset.tab);
+  });
+
+  /* Planner — collapsible sections */
+  document.querySelectorAll('.ps-header').forEach(hdr => {
+    hdr.addEventListener('click', () => {
+      const section = document.getElementById(hdr.dataset.section);
+      if (section) section.classList.toggle('collapsed');
+    });
+  });
+
+  /* Meal planner — week navigation */
+  mealPlanWeekStart = getWeekDates(todayStr())[0];
+  document.getElementById('mpPrevWeek').addEventListener('click', () => {
+    mealPlanWeekStart = offsetDate(mealPlanWeekStart, -7);
+    renderMealPlanner();
+  });
+  document.getElementById('mpNextWeek').addEventListener('click', () => {
+    const todayWeekMon = getWeekDates(todayStr())[0];
+    if (mealPlanWeekStart < todayWeekMon) {
+      mealPlanWeekStart = offsetDate(mealPlanWeekStart, 7);
+      renderMealPlanner();
+    }
+  });
+
+  /* Add meal option modal */
+  document.getElementById('addOptionCancel').addEventListener('click', hideAddOptionModal);
+  document.getElementById('addOptionConfirm').addEventListener('click', confirmAddOption);
+  document.getElementById('addOptionOverlay').addEventListener('click', e => {
+    if (e.target.id === 'addOptionOverlay') hideAddOptionModal();
+  });
+  document.getElementById('addOptionInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmAddOption();
+    if (e.key === 'Escape') hideAddOptionModal();
   });
 
   /* Date navigation */
