@@ -132,13 +132,13 @@ function renderPracticeList() {
         </div>
       </div>
       <div class="practice-actions">
-        <label class="na-label" title="Not applicable today">
-          <input type="checkbox" class="na-check" data-field="${p.id}">
-          <span class="na-text">N/A</span>
-        </label>
         <label class="toggle">
           <input type="checkbox" class="practice-check" data-field="${p.id}">
           <span class="toggle-slider"></span>
+        </label>
+        <label class="na-label" title="Not applicable today">
+          <input type="checkbox" class="na-check" data-field="${p.id}">
+          <span class="na-text">N/A</span>
         </label>
       </div>
     </div>`).join('');
