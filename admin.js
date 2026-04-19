@@ -309,6 +309,62 @@ function renderUsersTable(users, filter='') {
   `).join('');
 }
 
+/* ── STREAK VIEW ────────────────────────────────────────── */
+const MAIN_PRACTICE_IDS = [
+  'guru_pooja','surya_kriya','angamardana','asanas','sck_morning',
+  'shambhavi_morning','breath_watching','samyama','aum_namah_shivaya',
+  'shoonya_mid','miracle_of_mind','devi_stuti','bhuta_shuddhi',
+  'shoonya_evening'
+];
+
+function renderStreakView(users) {
+  const container = document.getElementById('streakView');
+  if (!container) return;
+  const today = todayStr();
+
+  // Build last-30 date array oldest → newest
+  const dates = Array.from({ length: 30 }, (_, i) => offsetDate(today, -(29 - i)));
+
+  // Column headers: day-of-month + short month on 1st
+  const headerCells = dates.map(d => {
+    const dt  = new Date(d + 'T00:00:00');
+    const day = dt.getDate();
+    const mon = dt.toLocaleDateString('en-GB', { month: 'short' });
+    return `<div class="streak-col-hdr">${day === 1 ? mon : day}</div>`;
+  }).join('');
+
+  const rows = users.map(u => {
+    const days = u.days || {};
+    const cells = dates.map(d => {
+      const s     = days[d]?.sadhana || {};
+      const done  = MAIN_PRACTICE_IDS.filter(id => s[id]).length;
+      const total = MAIN_PRACTICE_IDS.length;
+      const pct   = done / total;
+      const alpha = pct === 0 ? 0.07 : 0.18 + pct * 0.82;
+      const dt    = new Date(d + 'T00:00:00');
+      const label = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      return `<div class="streak-cell" style="background:var(--sadhana);opacity:${alpha.toFixed(2)}" title="${label}: ${done}/${total} practices"></div>`;
+    }).join('');
+
+    const avatar = u.photoURL
+      ? `<img class="streak-avatar" src="${u.photoURL}" alt="">`
+      : `<div class="streak-avatar streak-avatar-ph">${(u.name||'?')[0].toUpperCase()}</div>`;
+
+    return `
+      <div class="streak-row">
+        <div class="streak-user">${avatar}<span class="streak-name">${u.name || 'Unknown'}</span></div>
+        <div class="streak-cells">${cells}</div>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="streak-header-row">
+      <div class="streak-user-spacer"></div>
+      <div class="streak-cells">${headerCells}</div>
+    </div>
+    ${rows}`;
+}
+
 /* ── TOAST ──────────────────────────────────────────────── */
 let toastTimer;
 function showToast(msg) {
@@ -329,6 +385,7 @@ async function loadDashboard() {
     renderStats(analytics);
     renderCharts(analytics);
     renderUsersTable(allUserStats);
+    renderStreakView(users);
 
     document.getElementById('lastUpdated').textContent =
       `Last updated: ${new Date().toLocaleTimeString()}`;
