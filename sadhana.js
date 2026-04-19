@@ -93,8 +93,22 @@ function getDayData(dateStr) {
   return data[dateStr];
 }
 
+function lsKey() { return `sadhana_data_${currentUser?.uid}`; }
+
+function saveToLocalStorage() {
+  try { localStorage.setItem(lsKey(), JSON.stringify(data)); } catch(e) {}
+}
+
+function loadFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(lsKey());
+    if (raw) Object.assign(data, JSON.parse(raw));
+  } catch(e) {}
+}
+
 async function loadAllData() {
   if (!currentUser) return;
+  loadFromLocalStorage();          // instant — paint from cache first
   try {
     const snap = await db.collection('users').doc(currentUser.uid)
       .collection('days').get();
@@ -102,11 +116,13 @@ async function loadAllData() {
       data[doc.id] = doc.data();
       if (!data[doc.id].sadhana) data[doc.id].sadhana = defaultSadhana();
     });
+    saveToLocalStorage();          // keep cache in sync with Firestore
   } catch (e) { console.error('Load error:', e); }
 }
 
 function saveData() {
   if (!currentUser) return;
+  saveToLocalStorage();            // immediate local write
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     const dayData = data[currentDate] || { sadhana: defaultSadhana() };
@@ -590,6 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAnalytics();
       showLoading(false);
     } else {
+      try { localStorage.removeItem(lsKey()); } catch(e) {}
       currentUser = null;
       data = {};
       showLoading(false);
