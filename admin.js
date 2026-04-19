@@ -200,8 +200,6 @@ function computeAnalytics(users) {
 function renderStats(a) {
   document.getElementById('statTotalUsers').textContent  = a.totalUsers;
   document.getElementById('statActiveWeek').textContent  = a.activeThisWeek;
-  document.getElementById('statAvgSleep').textContent    = a.avgSleep   ? a.avgSleep.toFixed(1)   : '—';
-  document.getElementById('statAvgSteps').textContent    = a.avgSteps   ? Math.round(a.avgSteps).toLocaleString() : '—';
   document.getElementById('statTopStreak').textContent   = a.topStreak  ? `${a.topStreak} days`   : '—';
   document.getElementById('statAvgSadhana').textContent  = a.avgSadhana ? `${Math.round(a.avgSadhana)}%` : '—';
 }
@@ -296,8 +294,6 @@ function renderUsersTable(users, filter='') {
       <td class="cell-muted">${formatDate(u.createdAt)}</td>
       <td class="cell-muted">${u.lastActiveDate || '—'}</td>
       <td><span class="badge">${u.daysLogged}</span></td>
-      <td>${u.avgSleep   ? u.avgSleep.toFixed(1)+'h'               : '—'}</td>
-      <td>${u.avgSteps   ? Math.round(u.avgSteps).toLocaleString() : '—'}</td>
       <td>
         <div class="sadhana-bar-wrap">
           <div class="sadhana-bar" style="width:${u.avgSadhana||0}%"></div>
