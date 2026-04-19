@@ -10,7 +10,7 @@ const PRACTICES = [
   { id: 'surya_kriya',         name: 'Surya Kriya',                     icon: '☀️', desc: '', extra: [{ id: 'surya_kriya_cycles', label: 'Cycles' }, { id: 'surya_kriya_mins', label: 'Total mins' }] },
   { id: 'angamardana',         name: 'Angamardana',                     icon: '💪', desc: '', extra: [{ id: 'angamardana_cycles', label: 'Cycles' }] },
   { id: 'asanas',              name: 'Asanas',                          icon: '🤸', desc: '' },
-  { id: 'sck_morning',         name: 'Shakti Chalana Kriya (Morning)',  icon: '⚡', desc: '', extra: [{ id: 'sck_morning_kapalabhatis', label: 'Kapalabhatis / cycle' }] },
+  { id: 'sck_morning',         name: 'Shakti Chalana Kriya (Morning)',  icon: '⚡', desc: '', extra: [{ id: 'sck_morning_kapalabhatis', label: 'KPs / cycle' }] },
   { id: 'shambhavi_morning',   name: 'Shambhavi (Morning)',             icon: '🌅', desc: '' },
   { id: 'breath_watching',     name: 'Breath Watching',                 icon: '🫁', desc: '', extra: [{ id: 'breath_watching_mins', label: 'Minutes' }] },
   { id: 'samyama',             name: 'Samyama',                         icon: '🔮', desc: '', extra: [{ id: 'samyama_mins', label: 'Minutes' }] },
@@ -27,7 +27,7 @@ const PRACTICES = [
   { id: 'shoonya_evening',     name: 'Shoonya (Evening)',               icon: '🌙', desc: '' },
   { id: 'presence_time',       name: 'Presence Time',                   icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" style="vertical-align:middle"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="2.5" x2="12" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="21.5" y1="12" x2="19.5" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="21.5" x2="12" y2="19.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2.5" y1="12" x2="4.5" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="12" x2="11" y2="17.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="18.5" y2="15.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>', desc: '' },
   { id: 'iecc',                name: 'Inner Engineering Crash Course',  icon: '🌟', desc: '', textField: { id: 'iecc_notes', placeholder: 'Rule applied:\nScenario:' } },
-  { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: '', section: 'other', extra: [{ id: 'sck_evening_kapalabhatis', label: 'Kapalabhatis / cycle' }] },
+  { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: '', section: 'other', extra: [{ id: 'sck_evening_kapalabhatis', label: 'KPs / cycle' }] },
   { id: 'shambhavi_evening',   name: 'Shambhavi (Evening)',             icon: '🌅', desc: '', section: 'other' },
 ];
 
@@ -433,12 +433,12 @@ function renderAnalytics() {
     <div class="analytics-section">
       <div class="analytics-section-title">⚡ Shakti Chalana Kriya</div>
       <div class="analytics-grid">
-        <div class="stat-card"><div class="stat-value">${fmt(sckToday)}</div><div class="stat-label">Kapalabhatis today<br><span class="stat-date">${labelToday}</span></div></div>
+        <div class="stat-card"><div class="stat-value">${fmt(sckToday)}</div><div class="stat-label">KPs today<br><span class="stat-date">${labelToday}</span></div></div>
         <div class="stat-card"><div class="stat-value">${fmt(Math.round(sckAvgThis))}</div><div class="stat-label">Avg — past week<br><span class="stat-date">${labelWeek}</span></div></div>
         <div class="stat-card"><div class="stat-value">${fmt(Math.round(avg(daysRange(30).map(sckVal))))}</div><div class="stat-label">Avg — past month<br><span class="stat-date">${labelMonth}</span></div></div>
       </div>
       <div class="analytics-improvement">
-        <span class="improvement-label">Kapalabhatis/cycle vs last week</span>
+        <span class="improvement-label">KPs/cycle vs last week</span>
         <span class="improvement-value ${sckDiffLbl.cls}">${sckDiffLbl.txt}</span>
       </div>
     </div>
