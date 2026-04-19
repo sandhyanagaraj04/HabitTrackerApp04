@@ -44,7 +44,7 @@ const DEFAULT_SADHANA_PRACTICES = [
   { id: 'aum_namah_shivaya',   name: 'Aum Namah Shivaya Chanting',     icon: '🕉️', desc: '', extra: [{ id: 'aum_namah_shivaya_mins', label: 'Minutes' }] },
   { id: 'shoonya_mid',         name: 'Shoonya (Mid Morning)',           icon: '🌌', desc: '' },
   { id: 'miracle_of_mind',     name: 'Miracle of Mind',                 icon: '🧠', desc: '', extra: [{ id: 'miracle_of_mind_mins', label: 'Minutes' }] },
-  { id: 'devi_stuti',          name: 'Devi Stuti',                      icon: '🌸', desc: '', extra: [{ id: 'devi_stuti_cycles', label: 'Cycles' }] },
+  { id: 'devi_stuti',          name: 'Devi Stuti',                      icon: '🌸', desc: '', section: 'other', extra: [{ id: 'devi_stuti_cycles', label: 'Cycles' }] },
   { id: 'achala_arpanam',      name: 'Achala Arpanam',                  icon: '🏔️', desc: '', section: 'other' },
   { id: 'infinity_meditation', name: 'Infinity Meditation',             icon: '♾️', desc: '', section: 'other' },
   { id: 'sukha_kriya',         name: 'Sukha Kriya',                     icon: '😌', desc: '', section: 'other' },
