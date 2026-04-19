@@ -521,6 +521,54 @@ a      { color: inherit; text-decoration: none; }
   animation: fadeIn 0.3s ease;
 }
 
+/* ── BEST TEN DAYS ───────────────────────────────────────── */
+.best-empty {
+  text-align: center; color: var(--text-muted);
+  font-size: 14px; padding: 48px 20px;
+}
+.best-day-card {
+  display: flex; align-items: flex-start; gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  transition: border-color var(--transition);
+}
+.best-day-card:hover { border-color: var(--border-h); }
+.best-day-rank {
+  font-size: 24px; line-height: 1;
+  flex-shrink: 0; min-width: 36px; text-align: center;
+  padding-top: 2px;
+}
+.best-day-info { flex: 1; min-width: 0; }
+.best-day-date {
+  font-size: 14px; font-weight: 600; color: var(--text);
+  margin-bottom: 6px;
+}
+.best-day-meta {
+  display: flex; align-items: baseline; gap: 4px; margin-bottom: 8px;
+}
+.best-day-score {
+  font-size: 22px; font-weight: 800;
+  color: var(--primary-l); letter-spacing: -0.5px;
+}
+.best-day-max { font-size: 12px; color: var(--text-dim); }
+.best-day-bar-wrap {
+  height: 6px; background: rgba(255,255,255,0.07);
+  border-radius: 3px; overflow: hidden; margin-bottom: 8px;
+}
+.best-day-bar {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-l));
+  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+.best-day-breakdown {
+  display: flex; gap: 6px;
+  font-size: 11px; color: var(--text-muted);
+}
+.best-day-dot { color: var(--text-dim); }
+
 /* ── ANALYTICS ───────────────────────────────────────────── */
 .analytics-section {
   background: var(--surface);

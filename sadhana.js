@@ -434,6 +434,60 @@ function renderDateHeader() {
   if (next)  next.disabled = currentDate >= todayStr();
 }
 
+/* ── RENDER — BEST TEN DAYS ──────────────────────────────── */
+function renderBestTenDays() {
+  const el = document.getElementById('bestTenContent');
+  if (!el) return;
+
+  const mainPractices  = PRACTICES.filter(p => p.section !== 'other');
+  const otherPractices = PRACTICES.filter(p => p.section === 'other');
+  const maxMain  = mainPractices.length;
+  const maxOther = otherPractices.length;
+  const maxTotal = maxMain + maxOther;
+
+  const scored = Object.entries(data).map(([dateStr, dayData]) => {
+    const s = dayData.sadhana || {};
+    const mainDone  = mainPractices.filter(p => s[p.id]  && !s[`${p.id}_na`]).length;
+    const otherDone = otherPractices.filter(p => s[p.id] && !s[`${p.id}_na`]).length;
+    return { dateStr, mainDone, otherDone, total: mainDone + otherDone };
+  }).filter(d => d.total > 0);
+
+  scored.sort((a, b) => b.total - a.total || b.dateStr.localeCompare(a.dateStr));
+  const top10 = scored.slice(0, 10);
+
+  if (!top10.length) {
+    el.innerHTML = `<div class="best-empty">No data yet — start tracking to see your best days!</div>`;
+    return;
+  }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  el.innerHTML = top10.map((d, i) => {
+    const rank  = i < 3 ? medals[i] : `#${i + 1}`;
+    const pct   = Math.round(d.total / maxTotal * 100);
+    const dt    = new Date(d.dateStr + 'T00:00:00');
+    const label = dt.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    return `
+      <div class="best-day-card">
+        <div class="best-day-rank">${rank}</div>
+        <div class="best-day-info">
+          <div class="best-day-date">${label}</div>
+          <div class="best-day-meta">
+            <span class="best-day-score">${d.total} pts</span>
+            <span class="best-day-max">/ ${maxTotal}</span>
+          </div>
+          <div class="best-day-bar-wrap">
+            <div class="best-day-bar" style="width:${pct}%"></div>
+          </div>
+          <div class="best-day-breakdown">
+            <span>Core: ${d.mainDone}/${maxMain}</span>
+            <span class="best-day-dot">·</span>
+            <span>Other: ${d.otherDone}/${maxOther}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
 /* ── NAVIGATION ──────────────────────────────────────────── */
 function navigateTo(dateStr) {
   currentDate = dateStr;
@@ -452,6 +506,7 @@ function switchView(viewName) {
   if (nav)  nav.classList.add('active');
   if (viewName === 'trends')    renderTrends();
   if (viewName === 'analytics') renderAnalytics();
+  if (viewName === 'best')      renderBestTenDays();
 }
 
 /* ── SIDEBAR (mobile drawer) ─────────────────────────────── */
