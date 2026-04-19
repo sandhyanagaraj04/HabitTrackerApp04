@@ -7,7 +7,18 @@ const db   = firebase.firestore();
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-/* ── HELPERS ────────────────────────────────────────────── */
+/* ── ADMIN ACCESS ───────────────────────────────────────── */
+const ADMIN_EMAILS = [
+  'sandhyanagaraj04@gmail.com',
+  // add more emails here
+];
+const ADMIN_UIDS = [
+  // add UIDs here for extra security e.g. 'abc123uid'
+];
+
+function isAdmin(user) {
+  return ADMIN_EMAILS.includes(user.email) || ADMIN_UIDS.includes(user.uid);
+}
 function todayStr() { return new Date().toISOString().slice(0,10); }
 
 function offsetDate(str, days) {
@@ -52,13 +63,6 @@ function calcStreak(days) {
   return streak;
 }
 
-/* ── CHECK ADMIN ────────────────────────────────────────── */
-async function isAdmin(uid) {
-  try {
-    const snap = await db.collection('admins').doc(uid).get();
-    return snap.exists;
-  } catch { return false; }
-}
 
 /* ── LOAD ALL DATA ──────────────────────────────────────── */
 async function loadAdminData() {
@@ -83,7 +87,7 @@ function computeAnalytics(users) {
   const weekAgo = offsetDate(today, -7);
 
   let totalSleepHrs = [], totalSteps = [], totalSadhana = [];
-  let sadhanaFields = { guru_pooja:0, upa_yoga:0, yoga_namaskar:0, surya_kriya:0, asanas:0, sck_morning:0, shambhavi_morning:0, shoonya_mid:0, miracle_of_mind:0, devi_stuti:0, achala_arpanam:0, infinity_meditation:0, sukha_kriya:0, aum_chanting:0, nadi_shuddhi:0, shoonya_evening:0, sck_evening:0, shambhavi_evening:0 };
+  let sadhanaFields = { guru_pooja:0, upa_yoga:0, yoga_namaskar:0, surya_kriya:0, angamardana:0, asanas:0, sck_morning:0, shambhavi_morning:0, breath_watching:0, samyama:0, aum_namah_shivaya:0, shoonya_mid:0, miracle_of_mind:0, devi_stuti:0, achala_arpanam:0, infinity_meditation:0, sukha_kriya:0, aum_chanting:0, nadi_shuddhi:0, bhuta_shuddhi:0, shoonya_evening:0, sck_evening:0, shambhavi_evening:0 };
   let sadhanaTotal  = 0;
   let qualityCounts = [0,0,0,0,0]; // indices 0-4 = stars 1-5
   let mealSources   = { home:0, outside:0, ordered:0, canteen:0, skipped:0 };
@@ -224,8 +228,8 @@ function renderCharts(a) {
   charts = {};
 
   // Sadhana horizontal bar
-  const sadhanaLabels = ['Guru Pooja','Upa Yoga','Yoga Namaskar','Surya Kriya','Asanas','SCK (Morning)','Shambhavi (Morning)','Shoonya (Mid)','Miracle of Mind','Devi Stuti','Achala Arpanam','Infinity Meditation','Sukha Kriya','Aum Chanting','Nadi Shuddhi','Shoonya (Evening)','SCK (Evening)','Shambhavi (Evening)'];
-  const sadhanaKeys   = ['guru_pooja','upa_yoga','yoga_namaskar','surya_kriya','asanas','sck_morning','shambhavi_morning','shoonya_mid','miracle_of_mind','devi_stuti','achala_arpanam','infinity_meditation','sukha_kriya','aum_chanting','nadi_shuddhi','shoonya_evening','sck_evening','shambhavi_evening'];
+  const sadhanaLabels = ['Guru Pooja','Upa Yoga','Yoga Namaskar','Surya Kriya','Angamardana','Asanas','SCK (Morning)','Shambhavi (Morning)','Breath Watching','Samyama','Aum Namah Shivaya','Shoonya (Mid)','Miracle of Mind','Devi Stuti','Achala Arpanam','Infinity Meditation','Sukha Kriya','Aum Chanting','Nadi Shuddhi','Bhuta Shuddhi','Shoonya (Evening)','SCK (Evening)','Shambhavi (Evening)'];
+  const sadhanaKeys   = ['guru_pooja','upa_yoga','yoga_namaskar','surya_kriya','angamardana','asanas','sck_morning','shambhavi_morning','breath_watching','samyama','aum_namah_shivaya','shoonya_mid','miracle_of_mind','devi_stuti','achala_arpanam','infinity_meditation','sukha_kriya','aum_chanting','nadi_shuddhi','bhuta_shuddhi','shoonya_evening','sck_evening','shambhavi_evening'];
   charts.sadhana = makeChart('sadhanaChart', 'bar', {
     labels: sadhanaLabels,
     datasets: [{ data: sadhanaKeys.map(k => a.sadhanaCompletionPct[k]),
@@ -338,13 +342,10 @@ auth.onAuthStateChanged(async user => {
   if (!user) { window.location.href = 'index.html'; return; }
 
   document.getElementById('adminAvatar').src = user.photoURL || '';
-
-  const admin = await isAdmin(user.uid);
   document.getElementById('loadingScreen').style.display = 'none';
 
-  if (!admin) {
-    // Show UID in console to help them set up admin access
-    console.log('%c Your UID (add this to Firestore admins collection):', 'color:#34d399;font-weight:bold', user.uid);
+  if (!isAdmin(user)) {
+    console.log('%c Your UID (add to ADMIN_UIDS in admin.js):', 'color:#34d399;font-weight:bold', user.uid);
     document.getElementById('accessDenied').style.display = 'flex';
     return;
   }
