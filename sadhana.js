@@ -5,8 +5,8 @@
 /* ── PRACTICES LIST ─────────────────────────────────────── */
 const PRACTICES = [
   { id: 'guru_pooja',          name: 'Guru Pooja',                      icon: '🪔', desc: 'An invitation to the Divine' },
-  { id: 'upa_yoga',            name: 'Upa Yoga',                        icon: '🌀', desc: '' },
-  { id: 'yoga_namaskar',       name: 'Yoga Namaskar',                   icon: '🧘', desc: '', extra: [{ id: 'yoga_namaskar_cycles', label: 'Cycles' }] },
+  { id: 'upa_yoga',            name: 'Upa Yoga',                        icon: '🌀', desc: '', section: 'other' },
+  { id: 'yoga_namaskar',       name: 'Yoga Namaskar',                   icon: '🧘', desc: '', section: 'other', extra: [{ id: 'yoga_namaskar_cycles', label: 'Cycles' }] },
   { id: 'surya_kriya',         name: 'Surya Kriya',                     icon: '☀️', desc: '', extra: [{ id: 'surya_kriya_cycles', label: 'Cycles' }, { id: 'surya_kriya_mins', label: 'Total mins' }] },
   { id: 'angamardana',         name: 'Angamardana',                     icon: '💪', desc: '', extra: [{ id: 'angamardana_cycles', label: 'Cycles' }] },
   { id: 'asanas',              name: 'Asanas',                          icon: '🤸', desc: '' },
@@ -18,15 +18,15 @@ const PRACTICES = [
   { id: 'shoonya_mid',         name: 'Shoonya (Mid Morning)',           icon: '🌌', desc: '' },
   { id: 'miracle_of_mind',     name: 'Miracle of Mind',                 icon: '🧠', desc: '', extra: [{ id: 'miracle_of_mind_mins', label: 'Minutes' }] },
   { id: 'devi_stuti',          name: 'Devi Stuti',                      icon: '🌸', desc: '', extra: [{ id: 'devi_stuti_cycles', label: 'Cycles' }] },
-  { id: 'achala_arpanam',      name: 'Achala Arpanam',                  icon: '🏔️', desc: '' },
-  { id: 'infinity_meditation', name: 'Infinity Meditation',             icon: '♾️', desc: '' },
-  { id: 'sukha_kriya',         name: 'Sukha Kriya',                     icon: '😌', desc: '' },
-  { id: 'aum_chanting',        name: 'Aum Chanting',                    icon: '🔔', desc: '' },
-  { id: 'nadi_shuddhi',        name: 'Nadi Shuddhi',                    icon: '🌬️', desc: '' },
+  { id: 'achala_arpanam',      name: 'Achala Arpanam',                  icon: '🏔️', desc: '', section: 'other' },
+  { id: 'infinity_meditation', name: 'Infinity Meditation',             icon: '♾️', desc: '', section: 'other' },
+  { id: 'sukha_kriya',         name: 'Sukha Kriya',                     icon: '😌', desc: '', section: 'other' },
+  { id: 'aum_chanting',        name: 'Aum Chanting',                    icon: '🔔', desc: '', section: 'other' },
+  { id: 'nadi_shuddhi',        name: 'Nadi Shuddhi',                    icon: '🌬️', desc: '', section: 'other' },
   { id: 'bhuta_shuddhi',       name: 'Bhuta Shuddhi',                   icon: '🔥', desc: '' },
   { id: 'shoonya_evening',     name: 'Shoonya (Evening)',               icon: '🌙', desc: '' },
-  { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: '', extra: [{ id: 'sck_evening_kapalabhatis', label: 'Kapalabhatis / cycle' }] },
-  { id: 'shambhavi_evening',   name: 'Shambhavi (Evening)',             icon: '🌅', desc: '' },
+  { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: '', section: 'other', extra: [{ id: 'sck_evening_kapalabhatis', label: 'Kapalabhatis / cycle' }] },
+  { id: 'shambhavi_evening',   name: 'Shambhavi (Evening)',             icon: '🌅', desc: '', section: 'other' },
 ];
 
 /* ── STATE ───────────────────────────────────────────────── */
@@ -115,10 +115,8 @@ function saveData() {
 }
 
 /* ── RENDER — PRACTICE LIST (once) ──────────────────────── */
-function renderPracticeList() {
-  const list = document.getElementById('practiceList');
-  if (!list) return;
-  list.innerHTML = PRACTICES.map(p => `
+function practiceItemHTML(p) {
+  return `
     <div class="practice-item" data-practice="${p.id}">
       <div class="practice-info">
         <span class="practice-icon">${p.icon}</span>
@@ -141,7 +139,18 @@ function renderPracticeList() {
           <span class="na-text">N/A</span>
         </label>
       </div>
-    </div>`).join('');
+    </div>`;
+}
+
+function renderPracticeList() {
+  const list = document.getElementById('practiceList');
+  if (!list) return;
+  const main  = PRACTICES.filter(p => p.section !== 'other');
+  const other = PRACTICES.filter(p => p.section === 'other');
+  list.innerHTML =
+    main.map(practiceItemHTML).join('') +
+    `<div class="other-section-header">Other Practices</div>` +
+    other.map(practiceItemHTML).join('');
 
   /* Attach events */
   list.querySelectorAll('.na-check').forEach(el => {
