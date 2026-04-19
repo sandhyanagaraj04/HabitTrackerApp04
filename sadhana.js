@@ -178,7 +178,18 @@ function renderPracticeList() {
   list.innerHTML =
     main.map(practiceItemHTML).join('') +
     `<div class="benefits-wrap">
-       <label class="benefits-label">Benefits seen so far:</label>
+       <div class="benefits-label-row">
+         <label class="benefits-label" for="benefitsSeen">Benefits experienced so far:</label>
+         <button class="mic-btn" id="micBtn" title="Speak to fill" type="button">
+           <svg class="mic-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+             <rect x="9" y="2" width="6" height="12" rx="3"/>
+             <path d="M5 10a7 7 0 0 0 14 0"/>
+             <line x1="12" y1="17" x2="12" y2="21"/>
+             <line x1="8" y1="21" x2="16" y2="21"/>
+           </svg>
+           <span class="mic-label">Speak</span>
+         </button>
+       </div>
        <textarea class="practice-textarea benefits-inp" id="benefitsSeen" placeholder="Share what you've noticed…" rows="3"></textarea>
      </div>` +
     `<div class="other-section-header">Other Practices</div>` +
@@ -225,6 +236,59 @@ function renderPracticeList() {
     getDayData(currentDate).sadhana.benefits_seen = this.value;
     saveData();
   });
+
+  /* Speech-to-text for benefits */
+  const micBtn = document.getElementById('micBtn');
+  const benArea = document.getElementById('benefitsSeen');
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    micBtn.style.display = 'none';
+  } else {
+    let recognition = null;
+    let recording = false;
+
+    micBtn.addEventListener('click', () => {
+      if (recording) {
+        recognition.stop();
+        return;
+      }
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = true;
+      recognition.continuous = false;
+
+      const baseText = benArea.value;
+
+      recognition.onstart = () => {
+        recording = true;
+        micBtn.classList.add('mic-active');
+        micBtn.querySelector('.mic-label').textContent = 'Stop';
+      };
+
+      recognition.onresult = (e) => {
+        const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+        benArea.value = baseText + (baseText && !baseText.endsWith(' ') ? ' ' : '') + transcript;
+        getDayData(currentDate).sadhana.benefits_seen = benArea.value;
+        saveData();
+      };
+
+      recognition.onend = () => {
+        recording = false;
+        micBtn.classList.remove('mic-active');
+        micBtn.querySelector('.mic-label').textContent = 'Speak';
+        recognition = null;
+      };
+
+      recognition.onerror = () => {
+        recording = false;
+        micBtn.classList.remove('mic-active');
+        micBtn.querySelector('.mic-label').textContent = 'Speak';
+        recognition = null;
+      };
+
+      recognition.start();
+    });
+  }
 }
 
 /* ── RENDER — SADHANA STATE ──────────────────────────────── */
