@@ -84,6 +84,7 @@ function defaultSadhana() {
     if (p.textField) s[p.textField.id] = '';
     s[`${p.id}_na`] = false;
   });
+  s.benefits_seen = '';
   return s;
 }
 
@@ -176,6 +177,10 @@ function renderPracticeList() {
   const other = PRACTICES.filter(p => p.section === 'other');
   list.innerHTML =
     main.map(practiceItemHTML).join('') +
+    `<div class="benefits-wrap">
+       <label class="benefits-label">Benefits seen so far:</label>
+       <textarea class="practice-textarea benefits-inp" id="benefitsSeen" placeholder="Share what you've noticed…" rows="3"></textarea>
+     </div>` +
     `<div class="other-section-header">Other Practices</div>` +
     other.map(practiceItemHTML).join('');
 
@@ -216,6 +221,10 @@ function renderPracticeList() {
       saveData();
     });
   });
+  document.getElementById('benefitsSeen').addEventListener('input', function() {
+    getDayData(currentDate).sadhana.benefits_seen = this.value;
+    saveData();
+  });
 }
 
 /* ── RENDER — SADHANA STATE ──────────────────────────────── */
@@ -230,6 +239,8 @@ function renderSadhana() {
   document.querySelectorAll('.practice-text-inp').forEach(el => {
     el.value = s[el.dataset.text] || '';
   });
+  const ben = document.getElementById('benefitsSeen');
+  if (ben) ben.value = s.benefits_seen || '';
   document.querySelectorAll('.na-check').forEach(el => {
     const na = s[`${el.dataset.field}_na`] || false;
     el.checked = na;

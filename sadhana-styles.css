@@ -440,6 +440,15 @@ a      { color: inherit; text-decoration: none; }
 .practice-num:focus { border-color: var(--primary); outline: none; }
 .practice-extra-label { font-size: 11px; color: var(--text-muted); }
 
+/* Benefits seen text box */
+.benefits-wrap {
+  padding: 14px 4px 6px;
+}
+.benefits-label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: var(--primary-l); margin-bottom: 8px;
+}
+
 /* Other Practices section header */
 .other-section-header {
   font-size: 10px; font-weight: 700; letter-spacing: 1px;
