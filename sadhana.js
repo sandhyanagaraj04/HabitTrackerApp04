@@ -205,7 +205,7 @@ function renderSadhana() {
 
 function updateRing() {
   const s       = getDayData(currentDate).sadhana;
-  const active  = PRACTICES.filter(p => !s[`${p.id}_na`]);
+  const active  = PRACTICES.filter(p => p.section !== 'other' && !s[`${p.id}_na`]);
   const done    = active.filter(p => s[p.id]).length;
   const pct     = active.length ? Math.round(done / active.length * 100) : 0;
   const ring = document.getElementById('sadhanaRing');
@@ -216,7 +216,7 @@ function updateRing() {
 
 function updateBanner() {
   const s      = getDayData(currentDate).sadhana;
-  const active = PRACTICES.filter(p => !s[`${p.id}_na`]);
+  const active = PRACTICES.filter(p => p.section !== 'other' && !s[`${p.id}_na`]);
   const all    = active.length > 0 && active.every(p => s[p.id]);
   document.getElementById('completionBanner').style.display = all ? 'block' : 'none';
 }
