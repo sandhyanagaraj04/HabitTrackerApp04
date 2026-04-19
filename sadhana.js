@@ -179,7 +179,7 @@ function renderPracticeList() {
     main.map(practiceItemHTML).join('') +
     `<div class="benefits-wrap">
        <div class="benefits-label-row">
-         <label class="benefits-label" for="benefitsSeen">Benefits experienced so far:</label>
+         <label class="benefits-label" for="benefitsSeen">Benefits experienced so far</label>
          <button class="mic-btn" id="micBtn" title="Speak to fill" type="button">
            <svg class="mic-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
              <rect x="9" y="2" width="6" height="12" rx="3"/>
