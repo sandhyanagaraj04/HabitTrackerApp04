@@ -52,6 +52,7 @@ const DEFAULT_SADHANA_PRACTICES = [
   { id: 'nadi_shuddhi',        name: 'Nadi Shuddhi',                    icon: '🌬️', desc: '', section: 'other' },
   { id: 'bhuta_shuddhi',       name: 'Bhuta Shuddhi',                   icon: '🔥', desc: '' },
   { id: 'shoonya_evening',     name: 'Shoonya (Evening)',               icon: '🌙', desc: '' },
+  { id: 'presence_time',       name: 'Presence Time',                   icon: '🕯️', desc: '' },
   { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: '', section: 'other', extra: [{ id: 'sck_evening_kapalabhatis', label: 'Kapalabhatis / cycle' }] },
   { id: 'shambhavi_evening',   name: 'Shambhavi (Evening)',             icon: '🌅', desc: '', section: 'other' },
 ];
