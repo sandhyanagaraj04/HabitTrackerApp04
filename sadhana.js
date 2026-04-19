@@ -6,9 +6,9 @@
 const PRACTICES = [
   { id: 'guru_pooja',          name: 'Guru Pooja',                      icon: '🪔', desc: 'An invitation to the Divine' },
   { id: 'upa_yoga',            name: 'Upa Yoga',                        icon: '🌀', desc: '' },
-  { id: 'yoga_namaskar',       name: 'Yoga Namaskar',                   icon: '🧘', desc: '' },
+  { id: 'yoga_namaskar',       name: 'Yoga Namaskar',                   icon: '🧘', desc: '', extra: [{ id: 'yoga_namaskar_cycles', label: 'Cycles' }] },
   { id: 'surya_kriya',         name: 'Surya Kriya',                     icon: '☀️', desc: '', extra: [{ id: 'surya_kriya_cycles', label: 'Cycles' }, { id: 'surya_kriya_mins', label: 'Total mins' }] },
-  { id: 'angamardana',         name: 'Angamardana',                     icon: '💪', desc: '' },
+  { id: 'angamardana',         name: 'Angamardana',                     icon: '💪', desc: '', extra: [{ id: 'angamardana_cycles', label: 'Cycles' }] },
   { id: 'asanas',              name: 'Asanas',                          icon: '🤸', desc: '' },
   { id: 'sck_morning',         name: 'Shakti Chalana Kriya (Morning)',  icon: '⚡', desc: '', extra: [{ id: 'sck_morning_kapalabhatis', label: 'Kapalabhatis / cycle' }] },
   { id: 'shambhavi_morning',   name: 'Shambhavi (Morning)',             icon: '🌅', desc: '' },
