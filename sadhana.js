@@ -26,6 +26,7 @@ const PRACTICES = [
   { id: 'bhuta_shuddhi',       name: 'Bhuta Shuddhi',                   icon: '🔥', desc: '' },
   { id: 'shoonya_evening',     name: 'Shoonya (Evening)',               icon: '🌙', desc: '' },
   { id: 'presence_time',       name: 'Presence Time',                   icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" style="vertical-align:middle"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="2.5" x2="12" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="21.5" y1="12" x2="19.5" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="21.5" x2="12" y2="19.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2.5" y1="12" x2="4.5" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="12" x2="11" y2="17.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="12" x2="18.5" y2="15.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>', desc: '' },
+  { id: 'iecc',                name: 'Inner Engineering Crash Course',  icon: '🌟', desc: '', textField: { id: 'iecc_notes', placeholder: 'Rule applied:\nScenario:' } },
   { id: 'sck_evening',         name: 'Shakti Chalana Kriya (Evening)',  icon: '⚡', desc: '', section: 'other', extra: [{ id: 'sck_evening_kapalabhatis', label: 'Kapalabhatis / cycle' }] },
   { id: 'shambhavi_evening',   name: 'Shambhavi (Evening)',             icon: '🌅', desc: '', section: 'other' },
 ];
@@ -80,6 +81,7 @@ function defaultSadhana() {
   const s = Object.fromEntries(PRACTICES.map(p => [p.id, false]));
   PRACTICES.forEach(p => {
     (p.extra || []).forEach(e => { s[e.id] = 0; });
+    if (p.textField) s[p.textField.id] = '';
     s[`${p.id}_na`] = false;
   });
   return s;
@@ -117,30 +119,38 @@ function saveData() {
 
 /* ── RENDER — PRACTICE LIST (once) ──────────────────────── */
 function practiceItemHTML(p) {
-  return `
-    <div class="practice-item" data-practice="${p.id}">
-      <div class="practice-info">
-        <span class="practice-icon">${p.icon}</span>
-        <div>
-          <div class="practice-name">${p.name}</div>
-          ${p.desc ? `<div class="practice-desc">${p.desc}</div>` : ''}
-          ${(p.extra || []).map(e => `<div class="practice-extra">
-            <input type="number" class="practice-num practice-extra-inp" data-extra="${e.id}" placeholder="0" min="0">
-            <span class="practice-extra-label">${e.label}</span>
-          </div>`).join('')}
-        </div>
-      </div>
-      <div class="practice-actions">
-        <label class="toggle">
-          <input type="checkbox" class="practice-check" data-field="${p.id}">
-          <span class="toggle-slider"></span>
-        </label>
-        <label class="na-label" title="Not applicable today">
-          <input type="checkbox" class="na-check" data-field="${p.id}">
-          <span class="na-text">N/A</span>
-        </label>
+  const actions = `
+    <div class="practice-actions">
+      <label class="toggle">
+        <input type="checkbox" class="practice-check" data-field="${p.id}">
+        <span class="toggle-slider"></span>
+      </label>
+      <label class="na-label" title="Not applicable today">
+        <input type="checkbox" class="na-check" data-field="${p.id}">
+        <span class="na-text">N/A</span>
+      </label>
+    </div>`;
+  const info = `
+    <div class="practice-info">
+      <span class="practice-icon">${p.icon}</span>
+      <div>
+        <div class="practice-name">${p.name}</div>
+        ${p.desc ? `<div class="practice-desc">${p.desc}</div>` : ''}
+        ${(p.extra || []).map(e => `<div class="practice-extra">
+          <input type="number" class="practice-num practice-extra-inp" data-extra="${e.id}" placeholder="0" min="0">
+          <span class="practice-extra-label">${e.label}</span>
+        </div>`).join('')}
       </div>
     </div>`;
+  if (p.textField) {
+    return `
+      <div class="practice-item practice-item-tall" data-practice="${p.id}">
+        <div class="practice-row">${info}${actions}</div>
+        <textarea class="practice-textarea practice-text-inp" data-text="${p.textField.id}"
+          placeholder="${p.textField.placeholder}" rows="4"></textarea>
+      </div>`;
+  }
+  return `<div class="practice-item" data-practice="${p.id}">${info}${actions}</div>`;
 }
 
 function renderPracticeList() {
@@ -184,6 +194,12 @@ function renderPracticeList() {
       saveData();
     });
   });
+  list.querySelectorAll('.practice-text-inp').forEach(el => {
+    el.addEventListener('input', () => {
+      getDayData(currentDate).sadhana[el.dataset.text] = el.value;
+      saveData();
+    });
+  });
 }
 
 /* ── RENDER — SADHANA STATE ──────────────────────────────── */
@@ -194,6 +210,9 @@ function renderSadhana() {
   });
   document.querySelectorAll('.practice-extra-inp').forEach(el => {
     el.value = s[el.dataset.extra] || '';
+  });
+  document.querySelectorAll('.practice-text-inp').forEach(el => {
+    el.value = s[el.dataset.text] || '';
   });
   document.querySelectorAll('.na-check').forEach(el => {
     const na = s[`${el.dataset.field}_na`] || false;
