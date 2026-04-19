@@ -77,7 +77,10 @@ function showLogin(on) {
 /* ── DATA LAYER ──────────────────────────────────────────── */
 function defaultSadhana() {
   const s = Object.fromEntries(PRACTICES.map(p => [p.id, false]));
-  PRACTICES.forEach(p => (p.extra || []).forEach(e => { s[e.id] = 0; }));
+  PRACTICES.forEach(p => {
+    (p.extra || []).forEach(e => { s[e.id] = 0; });
+    s[`${p.id}_na`] = false;
+  });
   return s;
 }
 
@@ -128,13 +131,27 @@ function renderPracticeList() {
           </div>`).join('')}
         </div>
       </div>
-      <label class="toggle">
-        <input type="checkbox" class="practice-check" data-field="${p.id}">
-        <span class="toggle-slider"></span>
-      </label>
+      <div class="practice-actions">
+        <label class="na-label" title="Not applicable today">
+          <input type="checkbox" class="na-check" data-field="${p.id}">
+          <span class="na-text">N/A</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" class="practice-check" data-field="${p.id}">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>`).join('');
 
   /* Attach events */
+  list.querySelectorAll('.na-check').forEach(el => {
+    el.addEventListener('change', () => {
+      const key = `${el.dataset.field}_na`;
+      getDayData(currentDate).sadhana[key] = el.checked;
+      el.closest('.practice-item').classList.toggle('practice-na', el.checked);
+      saveData(); updateRing(); updateBanner();
+    });
+  });
   list.querySelectorAll('.practice-check').forEach(el => {
     el.addEventListener('change', () => {
       getDayData(currentDate).sadhana[el.dataset.field] = el.checked;
@@ -168,14 +185,20 @@ function renderSadhana() {
   document.querySelectorAll('.practice-extra-inp').forEach(el => {
     el.value = s[el.dataset.extra] || '';
   });
+  document.querySelectorAll('.na-check').forEach(el => {
+    const na = s[`${el.dataset.field}_na`] || false;
+    el.checked = na;
+    el.closest('.practice-item').classList.toggle('practice-na', na);
+  });
   updateRing();
   updateBanner();
 }
 
 function updateRing() {
-  const s    = getDayData(currentDate).sadhana;
-  const done = PRACTICES.filter(p => s[p.id]).length;
-  const pct  = Math.round(done / PRACTICES.length * 100);
+  const s       = getDayData(currentDate).sadhana;
+  const active  = PRACTICES.filter(p => !s[`${p.id}_na`]);
+  const done    = active.filter(p => s[p.id]).length;
+  const pct     = active.length ? Math.round(done / active.length * 100) : 0;
   const ring = document.getElementById('sadhanaRing');
   const pctEl = document.getElementById('sadhanaPct');
   if (ring)  ring.setAttribute('stroke-dasharray', `${pct} 100`);
@@ -183,8 +206,9 @@ function updateRing() {
 }
 
 function updateBanner() {
-  const s   = getDayData(currentDate).sadhana;
-  const all = PRACTICES.every(p => s[p.id]);
+  const s      = getDayData(currentDate).sadhana;
+  const active = PRACTICES.filter(p => !s[`${p.id}_na`]);
+  const all    = active.length > 0 && active.every(p => s[p.id]);
   document.getElementById('completionBanner').style.display = all ? 'block' : 'none';
 }
 
