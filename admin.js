@@ -482,6 +482,7 @@ auth.onAuthStateChanged(async user => {
     return;
   }
 
+  document.getElementById('adminSidebar').style.display = 'flex';
   document.getElementById('dashboard').style.display = 'block';
   await loadDashboard();
 

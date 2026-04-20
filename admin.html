@@ -30,32 +30,32 @@
   <p>Loading admin dashboard…</p>
 </div>
 
+<!-- ── SIDEBAR (outside dashboard so position:fixed works) ── -->
+<aside class="admin-sidebar" id="adminSidebar" style="display:none">
+  <div class="admin-sidebar-brand">
+    <span class="admin-brand-icon">✦</span>
+    <div>
+      <div class="admin-brand-name">Admin Dashboard</div>
+      <div class="admin-brand-sub">Sadhana Tracker</div>
+    </div>
+  </div>
+  <nav class="admin-sidebar-nav">
+    <button class="admin-nav-item active" data-view="overview">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Overview
+    </button>
+    <button class="admin-nav-item" data-view="leaderboard">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      Centre Leaderboard
+    </button>
+  </nav>
+  <div class="admin-sidebar-footer">
+    <a href="index.html" class="admin-back-link">← Back to App</a>
+  </div>
+</aside>
+
 <!-- ── DASHBOARD ───────────────────────────────────────── -->
 <div id="dashboard" style="display:none">
-
-  <!-- Sidebar -->
-  <aside class="admin-sidebar">
-    <div class="admin-sidebar-brand">
-      <span class="admin-brand-icon">✦</span>
-      <div>
-        <div class="admin-brand-name">Admin Dashboard</div>
-        <div class="admin-brand-sub">Sadhana Tracker</div>
-      </div>
-    </div>
-    <nav class="admin-sidebar-nav">
-      <button class="admin-nav-item active" data-view="overview">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        Overview
-      </button>
-      <button class="admin-nav-item" data-view="leaderboard">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-        Centre Leaderboard
-      </button>
-    </nav>
-    <div class="admin-sidebar-footer">
-      <a href="index.html" class="admin-back-link">← Back to App</a>
-    </div>
-  </aside>
 
   <!-- Header -->
   <header class="admin-header">
