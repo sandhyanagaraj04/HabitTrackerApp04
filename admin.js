@@ -7,6 +7,33 @@ const db   = firebase.firestore();
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
+const SADHANA_IDS = [
+  'guru_pooja','upa_yoga','yoga_namaskar','surya_kriya','angamardana','asanas',
+  'sck_morning','shambhavi_morning','breath_watching','samyama','aum_namah_shivaya',
+  'shoonya_mid','miracle_of_mind','devi_stuti','achala_arpanam','infinity_meditation',
+  'sukha_kriya','aum_chanting','nadi_shuddhi','bhuta_shuddhi','shoonya_evening',
+  'presence_time','iecc','sck_evening','shambhavi_evening'
+];
+
+function countPoints(sadhana) {
+  if (!sadhana) return 0;
+  return SADHANA_IDS.filter(id => sadhana[id] === true && !sadhana[id + '_na']).length;
+}
+
+function weekStart(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const dow = d.getDay();
+  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return d.toISOString().slice(0, 10);
+}
+
+function formatWeekRange(mondayStr) {
+  const d = new Date(mondayStr + 'T00:00:00');
+  const sun = new Date(d); sun.setDate(d.getDate() + 6);
+  const fmt = dt => dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return `${fmt(d)} – ${fmt(sun)}`;
+}
+
 /* ── ADMIN ACCESS ───────────────────────────────────────── */
 const ADMIN_EMAILS = [
   'sandhyanagaraj04@gmail.com',
@@ -181,6 +208,26 @@ function computeAnalytics(users) {
     Object.entries(sadhanaFields).map(([k,v]) => [k, sadhanaTotal ? Math.round(v/sadhanaTotal*100) : 0])
   );
 
+  // ── Centre weekly leaderboard ──
+  const centreMap = {};
+  users.forEach(u => {
+    if (!u.region) return;
+    const key = u.centre ? `${u.region}||${u.centre}` : u.region;
+    if (!centreMap[key]) centreMap[key] = { region: u.region, centre: u.centre || '', weekData: {} };
+    Object.entries(u.days || {}).forEach(([dateStr, day]) => {
+      const ws = weekStart(dateStr);
+      centreMap[key].weekData[ws] = (centreMap[key].weekData[ws] || 0) + countPoints(day.sadhana);
+    });
+  });
+
+  const recentWeeks = [];
+  let wk = weekStart(today);
+  for (let i = 0; i < 4; i++) { recentWeeks.push(wk); wk = offsetDate(wk, -7); }
+
+  const centreLeaderboard = Object.values(centreMap)
+    .map(c => ({ region: c.region, centre: c.centre, pts: recentWeeks.map(w => c.weekData[w] || 0) }))
+    .sort((a, b) => b.pts[0] - a.pts[0]);
+
   return {
     totalUsers:   users.length,
     activeThisWeek,
@@ -192,7 +239,9 @@ function computeAnalytics(users) {
     mealSources,
     sadhanaCompletionPct,
     avgStepsByDay,
-    userStats
+    userStats,
+    centreLeaderboard,
+    recentWeeks
   };
 }
 
@@ -372,6 +421,35 @@ function showToast(msg) {
 }
 
 /* ── MAIN ───────────────────────────────────────────────── */
+/* ── CENTRE LEADERBOARD ─────────────────────────────────── */
+function renderCentreLeaderboard(a) {
+  const { centreLeaderboard, recentWeeks } = a;
+  const weekLabels = ['This Week', 'Last Week', '2 Weeks Ago', '3 Weeks Ago'];
+  recentWeeks.forEach((w, i) => {
+    const el = document.getElementById(`centreWeek${i}`);
+    if (el) el.innerHTML = `${weekLabels[i]}<br><span class="week-range">${formatWeekRange(w)}</span>`;
+  });
+
+  const tbody = document.getElementById('centreTableBody');
+  if (!centreLeaderboard.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="centre-empty">No centre data yet — users need to select their centre in the app.</td></tr>';
+    return;
+  }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  tbody.innerHTML = centreLeaderboard.map((c, i) => {
+    const name   = c.centre || c.region;
+    const region = c.centre ? c.region : '';
+    const rank   = medals[i] || `${i + 1}.`;
+    return `
+      <tr>
+        <td><span class="centre-rank">${rank}</span> <strong>${name}</strong></td>
+        <td class="cell-muted">${region}</td>
+        ${c.pts.map((p, j) => `<td><span class="centre-pts${j === 0 ? ' centre-pts-now' : ''}">${p}</span></td>`).join('')}
+      </tr>`;
+  }).join('');
+}
+
 async function loadDashboard() {
   try {
     const users    = await loadAdminData();
@@ -382,6 +460,7 @@ async function loadDashboard() {
     renderCharts(analytics);
     renderUsersTable(allUserStats);
     renderStreakView(users);
+    renderCentreLeaderboard(analytics);
 
     document.getElementById('lastUpdated').textContent =
       `Last updated: ${new Date().toLocaleTimeString()}`;

@@ -376,6 +376,29 @@ body {
   white-space: nowrap;
 }
 
+/* ── CENTRE LEADERBOARD ─────────────────────────────────── */
+.centre-rank { font-size: 15px; margin-right: 4px; }
+.centre-pts {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px; font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface-h);
+}
+.centre-pts-now {
+  background: rgba(167,139,250,0.18);
+  color: var(--sadhana);
+}
+.week-range {
+  font-size: 10px; font-weight: 400;
+  color: var(--text-dim); letter-spacing: 0; text-transform: none;
+}
+.centre-empty {
+  text-align: center; color: var(--text-dim);
+  padding: 28px; font-size: 13px;
+}
+
 /* ── TOAST ──────────────────────────────────────────────── */
 .admin-toast {
   position: fixed;
