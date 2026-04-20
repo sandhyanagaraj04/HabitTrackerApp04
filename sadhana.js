@@ -32,10 +32,12 @@ const PRACTICES = [
 ];
 
 /* ── STATE ───────────────────────────────────────────────── */
-let currentUser = null;
-let currentDate = todayStr();
-let data        = {};   // { [dateStr]: { sadhana: { [id]: bool } } }
-let saveTimer   = null;
+let currentUser      = null;
+let currentDate      = todayStr();
+let data             = {};   // { [dateStr]: { sadhana: { [id]: bool } } }
+let saveTimer        = null;
+let streakPeriod     = 7;
+let streakPracticeId = PRACTICES[0].id;
 
 /* ── DATE HELPERS ────────────────────────────────────────── */
 function todayStr() {
@@ -346,6 +348,75 @@ function updateBanner() {
   document.getElementById('completionBanner').style.display = all ? 'block' : 'none';
 }
 
+/* ── STREAK HELPERS ──────────────────────────────────────── */
+function calcStreak(practiceId, numDays) {
+  const today = todayStr();
+  const results = Array.from({ length: numDays }, (_, i) => {
+    const d = offsetDate(today, -(numDays - 1 - i));
+    const s = data[d]?.sadhana || {};
+    return { date: d, done: !!s[practiceId], na: !!s[`${practiceId}_na`] };
+  });
+
+  let currentStreak = 0;
+  for (let i = results.length - 1; i >= 0; i--) {
+    if (results[i].na) continue;
+    if (results[i].done) currentStreak++;
+    else break;
+  }
+
+  let bestStreak = 0, run = 0;
+  for (const r of results) {
+    if (r.na) continue;
+    if (r.done) { run++; bestStreak = Math.max(bestStreak, run); }
+    else run = 0;
+  }
+
+  const daysDone       = results.filter(r => !r.na && r.done).length;
+  const daysApplicable = results.filter(r => !r.na).length;
+  return { currentStreak, bestStreak, daysDone, daysApplicable, results };
+}
+
+function renderStreakDisplay() {
+  const el = document.getElementById('streakDisplay');
+  if (!el) return;
+  const practice = PRACTICES.find(p => p.id === streakPracticeId) || PRACTICES[0];
+  const { currentStreak, bestStreak, daysDone, daysApplicable, results } = calcStreak(practice.id, streakPeriod);
+  const pct = daysApplicable > 0 ? Math.round(daysDone / daysApplicable * 100) : 0;
+
+  const dots = results.map(r => {
+    const dt = new Date(r.date + 'T00:00:00');
+    const label = dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    if (r.na)   return `<div class="streak-dot na"     title="${label}: N/A"></div>`;
+    if (r.done) return `<div class="streak-dot done"   title="${label}: Done ✓"></div>`;
+    return              `<div class="streak-dot missed" title="${label}: Not done"></div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="streak-stats">
+      <div class="streak-stat-card">
+        <div class="streak-stat-value">${currentStreak}</div>
+        <div class="streak-stat-label">Current streak</div>
+        <div class="streak-stat-sub">days in a row</div>
+      </div>
+      <div class="streak-stat-card">
+        <div class="streak-stat-value">${bestStreak}</div>
+        <div class="streak-stat-label">Best in period</div>
+        <div class="streak-stat-sub">days</div>
+      </div>
+      <div class="streak-stat-card">
+        <div class="streak-stat-value">${pct}%</div>
+        <div class="streak-stat-label">Completion</div>
+        <div class="streak-stat-sub">${daysDone} of ${daysApplicable} days</div>
+      </div>
+    </div>
+    <div class="streak-dots-wrap">${dots}</div>
+    <div class="streak-legend">
+      <span class="streak-legend-item"><span class="streak-legend-dot done"></span>Done</span>
+      <span class="streak-legend-item"><span class="streak-legend-dot missed"></span>Missed</span>
+      <span class="streak-legend-item"><span class="streak-legend-dot na"></span>N/A</span>
+    </div>`;
+}
+
 /* ── RENDER — ANALYTICS ──────────────────────────────────── */
 function renderAnalytics() {
   const el = document.getElementById('analyticsContent');
@@ -421,7 +492,25 @@ function renderAnalytics() {
   const suryaTimeDiffLbl = diffLabel(suryaTimeDiff !== null ? parseFloat(suryaTimeDiff.toFixed(1)) : null);
   const sckDiffLbl       = diffLabel(sckDiff !== null ? Math.round(sckDiff) : null);
 
+  const practiceOptions = PRACTICES.map(p =>
+    `<option value="${p.id}" ${p.id === streakPracticeId ? 'selected' : ''}>${p.name}</option>`
+  ).join('');
+
   el.innerHTML = `
+    <div class="analytics-section">
+      <div class="streak-head">
+        <div class="analytics-section-title">🔥 Practice Streak</div>
+        <div class="streak-filters">
+          <div class="streak-period-toggle">
+            <button class="streak-period-btn ${streakPeriod === 7 ? 'active' : ''}" data-days="7">Last 7 days</button>
+            <button class="streak-period-btn ${streakPeriod === 30 ? 'active' : ''}" data-days="30">Last 30 days</button>
+          </div>
+          <select class="streak-practice-select" id="streakPracticeSelect">${practiceOptions}</select>
+        </div>
+      </div>
+      <div id="streakDisplay"></div>
+    </div>
+
     <div class="analytics-section">
       <div class="analytics-section-title">⏱️ Total Practice Time</div>
       <div class="analytics-grid">
@@ -475,6 +564,26 @@ function renderAnalytics() {
       </div>
     </div>
   `;
+
+  el.querySelectorAll('.streak-period-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      streakPeriod = parseInt(btn.dataset.days);
+      el.querySelectorAll('.streak-period-btn').forEach(b =>
+        b.classList.toggle('active', parseInt(b.dataset.days) === streakPeriod)
+      );
+      renderStreakDisplay();
+    });
+  });
+
+  const practiceSelect = el.querySelector('#streakPracticeSelect');
+  if (practiceSelect) {
+    practiceSelect.addEventListener('change', e => {
+      streakPracticeId = e.target.value;
+      renderStreakDisplay();
+    });
+  }
+
+  renderStreakDisplay();
 }
 
 /* ── RENDER — TRENDS ─────────────────────────────────────── */
