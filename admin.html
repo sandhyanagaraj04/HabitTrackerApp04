@@ -33,142 +33,158 @@
 <!-- ── DASHBOARD ───────────────────────────────────────── -->
 <div id="dashboard" style="display:none">
 
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-brand">
+      <span class="admin-brand-icon">✦</span>
+      <div>
+        <div class="admin-brand-name">Admin Dashboard</div>
+        <div class="admin-brand-sub">Sadhana Tracker</div>
+      </div>
+    </div>
+    <nav class="admin-sidebar-nav">
+      <button class="admin-nav-item active" data-view="overview">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Overview
+      </button>
+      <button class="admin-nav-item" data-view="leaderboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        Centre Leaderboard
+      </button>
+    </nav>
+    <div class="admin-sidebar-footer">
+      <a href="index.html" class="admin-back-link">← Back to App</a>
+    </div>
+  </aside>
+
   <!-- Header -->
   <header class="admin-header">
     <div class="admin-header-inner">
-      <div class="admin-brand">
-        <span class="admin-brand-icon">✦</span>
-        <div>
-          <div class="admin-brand-name">Admin Dashboard</div>
-          <div class="admin-brand-sub">Sadhana Tracker</div>
-        </div>
-      </div>
+      <div class="last-updated" id="lastUpdated"></div>
       <div class="admin-header-right">
         <button class="refresh-btn" id="refreshBtn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Refresh
         </button>
         <img class="admin-avatar" id="adminAvatar" src="" alt="">
-        <a href="index.html" class="back-link">← App</a>
       </div>
     </div>
   </header>
 
   <main class="admin-main">
 
-    <!-- Last updated -->
-    <div class="last-updated" id="lastUpdated"></div>
+    <!-- ── VIEW: OVERVIEW ──────────────────────────────── -->
+    <section class="admin-view active" id="view-overview">
 
-    <!-- ── STAT CARDS ──────────────────────────────────── -->
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-icon" style="background:rgba(52,211,153,0.15);color:#34d399">👥</div>
-        <div class="stat-value" id="statTotalUsers">—</div>
-        <div class="stat-label">Total Users</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background:rgba(96,165,250,0.15);color:#60a5fa">📅</div>
-        <div class="stat-value" id="statActiveWeek">—</div>
-        <div class="stat-label">Active This Week</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background:rgba(248,113,113,0.15);color:#f87171">🔥</div>
-        <div class="stat-value" id="statTopStreak">—</div>
-        <div class="stat-label">Top Streak</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon" style="background:rgba(52,211,153,0.15);color:#34d399">🙏</div>
-        <div class="stat-value" id="statAvgSadhana">—</div>
-        <div class="stat-label">Avg Sadhana %</div>
-      </div>
-    </div>
-
-    <!-- ── CHARTS ROW ──────────────────────────────────── -->
-    <div class="charts-grid">
-
-      <div class="chart-card">
-        <h3 class="chart-title">Sadhana Completion <span class="chart-sub">% of days each practice was done</span></h3>
-        <div class="chart-wrap"><canvas id="sadhanaChart"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <h3 class="chart-title">Sleep Quality <span class="chart-sub">distribution across all days</span></h3>
-        <div class="chart-wrap"><canvas id="sleepQualityChart"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <h3 class="chart-title">Meal Sources <span class="chart-sub">where users eat most</span></h3>
-        <div class="chart-wrap chart-wrap-sm"><canvas id="mealSourceChart"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <h3 class="chart-title">Activity by Day <span class="chart-sub">avg steps per day of week</span></h3>
-        <div class="chart-wrap"><canvas id="dayOfWeekChart"></canvas></div>
-      </div>
-
-    </div>
-
-    <!-- ── USERS TABLE ─────────────────────────────────── -->
-    <div class="table-card">
-      <div class="table-header">
-        <h3 class="chart-title">All Users</h3>
-        <div class="table-controls">
-          <input type="text" class="search-input" id="userSearch" placeholder="Search by name or email…">
-          <div class="user-count" id="userCount"></div>
+      <!-- Stat Cards -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(52,211,153,0.15);color:#34d399">👥</div>
+          <div class="stat-value" id="statTotalUsers">—</div>
+          <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(96,165,250,0.15);color:#60a5fa">📅</div>
+          <div class="stat-value" id="statActiveWeek">—</div>
+          <div class="stat-label">Active This Week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(248,113,113,0.15);color:#f87171">🔥</div>
+          <div class="stat-value" id="statTopStreak">—</div>
+          <div class="stat-label">Top Streak</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(52,211,153,0.15);color:#34d399">🙏</div>
+          <div class="stat-value" id="statAvgSadhana">—</div>
+          <div class="stat-label">Avg Sadhana %</div>
         </div>
       </div>
-      <div class="table-wrap">
-        <table class="users-table" id="usersTable">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Email</th>
-              <th>Joined</th>
-              <th>Last Active</th>
-              <th>Days Logged</th>
-              <th>Sadhana %</th>
-              <th>Streak</th>
-            </tr>
-          </thead>
-          <tbody id="usersTableBody"></tbody>
-        </table>
-      </div>
-    </div>
 
-    <!-- ── 30-DAY STREAK VIEW ────────────────────────────── -->
-    <div class="table-card streak-card">
-      <div class="table-header">
-        <h3 class="chart-title">30-Day Sadhana Activity <span class="chart-sub">per user</span></h3>
-        <div class="streak-legend">
-          <span class="streak-legend-item"><span class="streak-dot" style="opacity:0.12"></span> None</span>
-          <span class="streak-legend-item"><span class="streak-dot" style="opacity:0.4"></span> Partial</span>
-          <span class="streak-legend-item"><span class="streak-dot" style="opacity:1"></span> Full</span>
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3 class="chart-title">Sadhana Completion <span class="chart-sub">% of days each practice was done</span></h3>
+          <div class="chart-wrap"><canvas id="sadhanaChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Sleep Quality <span class="chart-sub">distribution across all days</span></h3>
+          <div class="chart-wrap"><canvas id="sleepQualityChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Meal Sources <span class="chart-sub">where users eat most</span></h3>
+          <div class="chart-wrap chart-wrap-sm"><canvas id="mealSourceChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Activity by Day <span class="chart-sub">avg steps per day of week</span></h3>
+          <div class="chart-wrap"><canvas id="dayOfWeekChart"></canvas></div>
         </div>
       </div>
-      <div id="streakView"></div>
-    </div>
 
-    <!-- ── CENTRE LEADERBOARD ───────────────────────────────── -->
-    <div class="table-card" style="margin-top:24px">
-      <div class="table-header">
-        <h3 class="chart-title">Centre Leaderboard <span class="chart-sub">total sadhana points · week starts Monday</span></h3>
+      <!-- Users Table -->
+      <div class="table-card">
+        <div class="table-header">
+          <h3 class="chart-title">All Users</h3>
+          <div class="table-controls">
+            <input type="text" class="search-input" id="userSearch" placeholder="Search by name or email…">
+            <div class="user-count" id="userCount"></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="users-table" id="usersTable">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Joined</th>
+                <th>Last Active</th>
+                <th>Days Logged</th>
+                <th>Sadhana %</th>
+                <th>Streak</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="table-wrap">
-        <table class="users-table">
-          <thead>
-            <tr>
-              <th>Centre</th>
-              <th>Region</th>
-              <th id="centreWeek0">This Week</th>
-              <th id="centreWeek1">Last Week</th>
-              <th id="centreWeek2">2 Weeks Ago</th>
-              <th id="centreWeek3">3 Weeks Ago</th>
-            </tr>
-          </thead>
-          <tbody id="centreTableBody"></tbody>
-        </table>
+
+      <!-- 30-Day Streak View -->
+      <div class="table-card streak-card" style="margin-top:24px">
+        <div class="table-header">
+          <h3 class="chart-title">30-Day Sadhana Activity <span class="chart-sub">per user</span></h3>
+          <div class="streak-legend">
+            <span class="streak-legend-item"><span class="streak-dot" style="opacity:0.12"></span> None</span>
+            <span class="streak-legend-item"><span class="streak-dot" style="opacity:0.4"></span> Partial</span>
+            <span class="streak-legend-item"><span class="streak-dot" style="opacity:1"></span> Full</span>
+          </div>
+        </div>
+        <div id="streakView"></div>
       </div>
-    </div>
+
+    </section>
+
+    <!-- ── VIEW: CENTRE LEADERBOARD ────────────────────── -->
+    <section class="admin-view" id="view-leaderboard">
+      <div class="table-card">
+        <div class="table-header">
+          <h3 class="chart-title">Centre Leaderboard <span class="chart-sub">total sadhana points · week starts Monday</span></h3>
+        </div>
+        <div class="table-wrap">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>Centre</th>
+                <th>Region</th>
+                <th id="centreWeek0">This Week</th>
+                <th id="centreWeek1">Last Week</th>
+                <th id="centreWeek2">2 Weeks Ago</th>
+                <th id="centreWeek3">3 Weeks Ago</th>
+              </tr>
+            </thead>
+            <tbody id="centreTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
   </main>
 </div>

@@ -485,6 +485,16 @@ auth.onAuthStateChanged(async user => {
   document.getElementById('dashboard').style.display = 'block';
   await loadDashboard();
 
+  // Sidebar nav
+  document.querySelectorAll('.admin-nav-item[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.admin-nav-item').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.admin-view').forEach(v => v.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`view-${btn.dataset.view}`).classList.add('active');
+    });
+  });
+
   // Search
   document.getElementById('userSearch').addEventListener('input', e => {
     renderUsersTable(allUserStats, e.target.value);
