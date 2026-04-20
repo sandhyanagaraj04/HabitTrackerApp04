@@ -36,7 +36,7 @@ let currentUser      = null;
 let currentDate      = todayStr();
 let data             = {};   // { [dateStr]: { sadhana: { [id]: bool } } }
 let saveTimer        = null;
-let streakPeriod     = 7;
+let streakPeriod     = 30;
 let streakPracticeId = 'shambhavi_morning';
 
 /* ── DATE HELPERS ────────────────────────────────────────── */
