@@ -38,6 +38,50 @@
   </div>
 </div>
 
+<!-- Centre Selection Modal -->
+<div class="centre-overlay" id="centreModal" style="display:none">
+  <div class="centre-card">
+    <div class="centre-card-icon">🏛️</div>
+    <h2 class="centre-card-title">Which centre do you belong to?</h2>
+    <p class="centre-card-sub">Tell us your Isha centre so we can connect you with your local community.</p>
+
+    <div class="centre-form">
+      <div class="centre-field-group">
+        <label class="centre-field-label" for="regionSelect">Region</label>
+        <select class="centre-select" id="regionSelect">
+          <option value="">Select your region…</option>
+          <option>KA - Bengaluru</option>
+          <option>KA - Outside Bengaluru</option>
+          <option>Lucknow</option>
+          <option>Delhi</option>
+          <option>Hyderabad</option>
+          <option>Chennai</option>
+        </select>
+      </div>
+
+      <div class="centre-field-group" id="centreDropdownGroup" style="display:none">
+        <label class="centre-field-label" for="centreSelect">Centre</label>
+        <select class="centre-select" id="centreSelect">
+          <option value="">Select your centre…</option>
+        </select>
+      </div>
+
+      <div class="centre-field-group" id="customCentreGroup" style="display:none">
+        <label class="centre-field-label" for="customCentreInput">Centre name</label>
+        <input type="text" class="centre-text-input" id="customCentreInput" placeholder="Type your centre name…" autocomplete="off">
+        <p class="centre-hint">Thanks! We'll look into adding it to our list.</p>
+      </div>
+
+      <p class="centre-not-listed" id="centreNotListed" style="display:none">
+        Can't find your centre in the list?
+        <button type="button" class="centre-not-listed-btn" id="centreNotListedBtn">Add it here</button>
+      </p>
+
+      <button class="centre-continue-btn" id="centreContinueBtn" disabled>Continue</button>
+    </div>
+  </div>
+</div>
+
 <!-- App -->
 <div class="app-screen" id="appScreen" style="display:none">
 

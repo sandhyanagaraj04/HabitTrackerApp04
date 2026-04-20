@@ -62,6 +62,20 @@ function formatDateFull(dateStr) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
+/* ── CENTRE OPTIONS ──────────────────────────────────────── */
+const CENTRE_OPTIONS = {
+  'KA - Bengaluru': [
+    'Banaswadi', 'Bannerghatta Road', 'Budigere cross', 'Electronic City',
+    'Hebbal', 'Indiranagar', 'Malleshwaram', 'Jayanagar', 'Girinagar',
+    'Koramangala/HSR layout', 'Marathahalli', 'Whitefield', 'Vijayanagar', 'Yelahanka',
+  ],
+  'KA - Outside Bengaluru': [
+    'Mysuru', 'Mandya', 'Mangaluru', 'Udupi', 'Chikkaballapura', 'Doddaballapura',
+    'Kolar', 'Tumkur', 'Chikkamagalur', 'Hassan', 'Belagavi', 'Hubli Dharwad',
+    'Kalaburgi', 'Bidar', 'Vijayapura', 'Others',
+  ],
+};
+
 /* ── FIREBASE ────────────────────────────────────────────── */
 const app = firebase.initializeApp(firebaseConfig, 'sadhana-support');
 const auth = app.auth();
@@ -626,9 +640,107 @@ function renderUserMenu(user) {
   if (email) email.textContent   = user.email || '';
 }
 
+/* ── CENTRE MODAL ────────────────────────────────────────── */
+function showCentreModal(on) {
+  document.getElementById('centreModal').style.display = on ? 'flex' : 'none';
+}
+
+function initCentreModal() {
+  const regionEl      = document.getElementById('regionSelect');
+  const dropdownGroup = document.getElementById('centreDropdownGroup');
+  const centreEl      = document.getElementById('centreSelect');
+  const customGroup   = document.getElementById('customCentreGroup');
+  const customInput   = document.getElementById('customCentreInput');
+  const notListed     = document.getElementById('centreNotListed');
+  const notListedBtn  = document.getElementById('centreNotListedBtn');
+  const continueBtn   = document.getElementById('centreContinueBtn');
+
+  let customMode = false;
+
+  function resetSub() {
+    dropdownGroup.style.display = 'none';
+    customGroup.style.display   = 'none';
+    notListed.style.display     = 'none';
+    centreEl.value              = '';
+    customInput.value           = '';
+    customMode                  = false;
+  }
+
+  function validate() {
+    const region = regionEl.value;
+    if (!region) { continueBtn.disabled = true; return; }
+    if (CENTRE_OPTIONS[region]) {
+      continueBtn.disabled = customMode ? !customInput.value.trim() : !centreEl.value;
+    } else {
+      continueBtn.disabled = false;
+    }
+  }
+
+  regionEl.addEventListener('change', () => {
+    const region = regionEl.value;
+    resetSub();
+    if (region && CENTRE_OPTIONS[region]) {
+      centreEl.innerHTML =
+        '<option value="">Select your centre…</option>' +
+        CENTRE_OPTIONS[region].map(c => `<option>${c}</option>`).join('');
+      dropdownGroup.style.display = 'block';
+      if (region === 'KA - Bengaluru') notListed.style.display = 'block';
+    }
+    validate();
+  });
+
+  centreEl.addEventListener('change', () => {
+    if (centreEl.value === 'Others') {
+      customGroup.style.display = 'block';
+      customMode = true;
+    } else {
+      customGroup.style.display = 'none';
+      customMode = false;
+      customInput.value = '';
+    }
+    validate();
+  });
+
+  notListedBtn.addEventListener('click', () => {
+    customMode = true;
+    dropdownGroup.style.display = 'none';
+    notListed.style.display     = 'none';
+    customGroup.style.display   = 'block';
+    centreEl.value              = '';
+    customInput.focus();
+    validate();
+  });
+
+  customInput.addEventListener('input', validate);
+
+  continueBtn.addEventListener('click', async () => {
+    const region = regionEl.value;
+    if (!region) return;
+    const centre = CENTRE_OPTIONS[region]
+      ? (customMode ? customInput.value.trim() : centreEl.value)
+      : region;
+    if (CENTRE_OPTIONS[region] && !centre) return;
+
+    continueBtn.disabled = true;
+    continueBtn.textContent = 'Saving…';
+    try {
+      await db.collection('users').doc(currentUser.uid).set(
+        { region, centre },
+        { merge: true }
+      );
+      showCentreModal(false);
+    } catch (e) {
+      console.error('Centre save error:', e);
+      continueBtn.disabled = false;
+      continueBtn.textContent = 'Continue';
+    }
+  });
+}
+
 /* ── INIT ────────────────────────────────────────────────── */
 function init() {
   renderPracticeList();
+  initCentreModal();
 
   /* Sidebar nav */
   document.querySelectorAll('.nav-item[data-view]').forEach(btn => {
@@ -667,6 +779,15 @@ document.addEventListener('DOMContentLoaded', () => {
       currentUser = user;
       showLoading(true);
       showLogin(false);
+
+      let hasRegion = false;
+      try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        hasRegion = !!(userDoc.data()?.region);
+      } catch(e) {
+        hasRegion = true;
+      }
+
       db.collection('users').doc(user.uid).set({
         name:       user.displayName || '',
         email:      user.email || '',
@@ -680,6 +801,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renderTrends();
       renderAnalytics();
       showLoading(false);
+
+      if (!hasRegion) showCentreModal(true);
     } else {
       try { localStorage.removeItem(lsKey()); } catch(e) {}
       currentUser = null;
