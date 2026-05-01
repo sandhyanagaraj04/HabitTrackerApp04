@@ -1347,6 +1347,7 @@ function renderDailyTracker() {
           placeholder="${isCurrent ? 'What are you doing now?' : ''}">${val}</textarea>
       </div>
       <button class="slot-edit-btn" title="Edit entry" data-slot="${key}">✏️</button>
+      <button class="slot-del-btn" title="Delete entry" data-slot="${key}">✕</button>
       <button class="slot-mic-btn" data-slot="${key}" title="Speak to fill">🎤</button>
     </div>`;
   }).join('');
@@ -1377,6 +1378,17 @@ function renderDailyTracker() {
       const slot = btn.closest('.tracker-slot');
       slot.classList.add('editing');
       slot.querySelector('.slot-input').focus();
+    });
+  });
+
+  container.querySelectorAll('.slot-del-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      saveTrackerSlot(btn.dataset.slot, '');
+      const slot = btn.closest('.tracker-slot');
+      slot.querySelector('.slot-input').value = '';
+      slot.classList.remove('has-value', 'editing');
+      parseTrackerEntry('', currentDate);
+      renderPendingHabits();
     });
   });
 
@@ -2282,6 +2294,12 @@ function init() {
   });
 
 
+
+  /* Jump to current time slot */
+  document.getElementById('jumpNowBtn')?.addEventListener('click', () => {
+    const cur = document.querySelector('.tracker-slot.current-slot');
+    if (cur) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
 
   /* Date navigation */
   document.getElementById('prevDay').addEventListener('click', () =>

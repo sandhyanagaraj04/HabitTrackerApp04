@@ -2317,7 +2317,8 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
 .slot-input::placeholder { color: var(--text-dim); }
 
 /* Edit button (pencil) — hidden by default, shown in view mode */
-.slot-edit-btn {
+.slot-edit-btn,
+.slot-del-btn {
   display: none;
   width: 26px;
   height: 26px;
@@ -2333,18 +2334,42 @@ input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
   transition: background var(--transition), color var(--transition);
 }
 .slot-edit-btn:hover { background: var(--surface-h); color: var(--text); }
+.slot-del-btn:hover  { background: rgba(248,113,113,0.12); border-color: var(--danger); color: var(--danger); }
 
 /* VIEW MODE: slot has saved content */
 .tracker-slot.has-value .slot-display  { display: block; }
 .tracker-slot.has-value .slot-edit-btn { display: flex; }
+.tracker-slot.has-value .slot-del-btn  { display: flex; }
 .tracker-slot.has-value .slot-input    { display: none; }
 .tracker-slot.has-value .slot-mic-btn  { display: none; }
 
 /* EDIT MODE: user clicked pencil or slot is being edited */
 .tracker-slot.has-value.editing .slot-display  { display: none; }
 .tracker-slot.has-value.editing .slot-edit-btn { display: none; }
+.tracker-slot.has-value.editing .slot-del-btn  { display: none; }
 .tracker-slot.has-value.editing .slot-input    { display: block; }
 .tracker-slot.has-value.editing .slot-mic-btn  { display: flex; }
+
+/* Jump to Now button */
+.jump-now-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tracker, #2dd4bf);
+  background: rgba(45,212,191,0.08);
+  border: 1px solid rgba(45,212,191,0.2);
+  border-radius: 20px;
+  padding: 4px 10px;
+  white-space: nowrap;
+  transition: background var(--transition), border-color var(--transition);
+}
+.jump-now-btn:hover {
+  background: rgba(45,212,191,0.15);
+  border-color: rgba(45,212,191,0.35);
+}
+.jump-now-btn svg { flex-shrink: 0; }
 
 .slot-mic-btn {
   width: 30px;
