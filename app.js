@@ -154,6 +154,7 @@ function defaultDay() {
     plan: { breakfast: '', lunch: '', snack: '', dinner: '' },
     reading:   { did_read: false, book_title: '', author: '', pages_read: 0, duration_mins: 0, notes: '' },
     tracker:   {},
+    planner:   {},
     priorities: ['', '', ''],
     mealSlots: {}
   };
@@ -1778,6 +1779,138 @@ function renderTrends() {
   renderTrendBars('bars-reading-did', d => !!(data[d]?.reading?.did_read), 'var(--reading)');
 }
 
+/* ── PLANNER SLOTS — 15-MIN SCHEDULE ───────────────────── */
+function savePlannerSlot(slotKey, value) {
+  if (!data[currentDate]) data[currentDate] = defaultDay();
+  if (!data[currentDate].planner) data[currentDate].planner = {};
+  if (value.trim()) data[currentDate].planner[slotKey] = value;
+  else delete data[currentDate].planner[slotKey];
+  saveData();
+}
+
+function renderPlannerSlots() {
+  const container = document.getElementById('plannerSlots');
+  if (!container) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const warn = document.getElementById('plannerVoiceWarn');
+  if (warn) warn.style.display = SpeechRecognition ? 'none' : 'block';
+
+  const now    = new Date();
+  const nowKey = isToday(currentDate)
+    ? `${String(now.getHours()).padStart(2,'0')}${String(Math.floor(now.getMinutes()/15)*15).padStart(2,'0')}`
+    : null;
+
+  const planner = getDayData(currentDate).planner || {};
+  const slots   = [];
+  for (let h = 5; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const key  = `${String(h).padStart(2,'0')}${String(m).padStart(2,'0')}`;
+      const disp = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      slots.push({ key, disp });
+    }
+  }
+
+  container.innerHTML = slots.map(({ key, disp }) => {
+    const isCurrent = key === nowKey;
+    const val = planner[key] || '';
+    return `<div class="tracker-slot${isCurrent ? ' current-slot' : ''}${val ? ' has-value' : ''}" data-key="${key}">
+      <span class="slot-time">${disp}</span>
+      <div class="slot-body">
+        <div class="slot-display">${escapeHtml(val)}</div>
+        <textarea class="slot-input" rows="1" data-slot="${key}"
+          placeholder="${isCurrent ? 'Plan for now…' : ''}">${val}</textarea>
+      </div>
+      <button class="slot-edit-btn" title="Edit" data-slot="${key}">✏️</button>
+      <button class="slot-del-btn" title="Delete" data-slot="${key}">✕</button>
+      <button class="slot-mic-btn pslot-mic" data-slot="${key}" title="Speak to fill">🎤</button>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('.slot-input').forEach(ta => {
+    autoResizeTextarea(ta);
+    ta.addEventListener('input', () => {
+      autoResizeTextarea(ta);
+      savePlannerSlot(ta.dataset.slot, ta.value);
+    });
+    ta.addEventListener('blur', () => {
+      const slot = ta.closest('.tracker-slot');
+      const val  = ta.value.trim();
+      if (val) {
+        slot.querySelector('.slot-display').textContent = val;
+        slot.classList.add('has-value');
+        slot.classList.remove('editing');
+      } else {
+        slot.classList.remove('has-value', 'editing');
+      }
+    });
+  });
+
+  container.querySelectorAll('.slot-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const slot = btn.closest('.tracker-slot');
+      slot.classList.add('editing');
+      slot.querySelector('.slot-input').focus();
+    });
+  });
+
+  container.querySelectorAll('.slot-del-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      savePlannerSlot(btn.dataset.slot, '');
+      const slot = btn.closest('.tracker-slot');
+      slot.querySelector('.slot-input').value = '';
+      slot.classList.remove('has-value', 'editing');
+    });
+  });
+
+  container.querySelectorAll('.pslot-mic').forEach(btn => {
+    btn.addEventListener('click', () => startPlannerVoice(btn.dataset.slot));
+  });
+
+  if (nowKey && isToday(currentDate)) {
+    const cur = container.querySelector('.current-slot');
+    if (cur) setTimeout(() => cur.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+  }
+}
+
+let activePlannerRecognition = null;
+
+function startPlannerVoice(slotKey) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('⚠️ Speech not supported in this browser'); return; }
+
+  if (activePlannerRecognition) { activePlannerRecognition.stop(); activePlannerRecognition = null; return; }
+
+  const btn = document.querySelector(`.pslot-mic[data-slot="${slotKey}"]`);
+  const ta  = document.querySelector(`#plannerSlots .slot-input[data-slot="${slotKey}"]`);
+
+  const recognition = new SpeechRecognition();
+  recognition.lang           = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  activePlannerRecognition = recognition;
+  if (btn) btn.classList.add('recording');
+
+  recognition.onresult = e => {
+    const transcript = e.results[0][0].transcript;
+    if (ta) {
+      const newVal = (ta.value ? ta.value + ' ' : '') + transcript;
+      ta.value = newVal;
+      autoResizeTextarea(ta);
+      savePlannerSlot(slotKey, newVal);
+      const slotEl = document.querySelector(`#plannerSlots .tracker-slot[data-key="${slotKey}"]`);
+      if (slotEl) {
+        slotEl.querySelector('.slot-display').textContent = newVal;
+        slotEl.classList.add('has-value');
+        slotEl.classList.remove('editing');
+      }
+    }
+  };
+  recognition.onerror = () => { if (btn) btn.classList.remove('recording'); activePlannerRecognition = null; };
+  recognition.onend   = () => { if (btn) btn.classList.remove('recording'); activePlannerRecognition = null; };
+  recognition.start();
+}
+
 /* ── FULL RENDER ────────────────────────────────────────── */
 function renderAll() {
   renderHeader();
@@ -1787,6 +1920,7 @@ function renderAll() {
   renderBadges();
   updateExportSummary();
   renderPlanner();
+  renderPlannerSlots();
   renderMealPlanner();
   renderDailyTracker();
   renderPriorities();
@@ -2295,9 +2429,15 @@ function init() {
 
 
 
-  /* Jump to current time slot */
+  /* Jump to current time slot — Daily Tracker */
   document.getElementById('jumpNowBtn')?.addEventListener('click', () => {
-    const cur = document.querySelector('.tracker-slot.current-slot');
+    const cur = document.querySelector('#trackerSlots .current-slot');
+    if (cur) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  /* Jump to current time slot — Daily Planner */
+  document.getElementById('plannerJumpNowBtn')?.addEventListener('click', () => {
+    const cur = document.querySelector('#plannerSlots .current-slot');
     if (cur) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 

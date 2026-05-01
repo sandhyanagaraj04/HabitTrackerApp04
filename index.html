@@ -385,6 +385,24 @@
       </div>
     </div>
 
+    <!-- Day Schedule — 15-min time slots -->
+    <div class="card card-planner-sched">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-emoji">🗓️</span>
+          <h2 class="card-title">Day Schedule</h2>
+        </div>
+        <button class="jump-now-btn" id="plannerJumpNowBtn" title="Jump to current time">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Now
+        </button>
+      </div>
+      <div class="voice-warn" id="plannerVoiceWarn" style="display:none">
+        ⚠️ Voice input not supported in this browser. Use typing instead.
+      </div>
+      <div class="planner-slots" id="plannerSlots"></div>
+    </div>
+
     <!-- Health Section -->
     <div class="planner-section ps-health" id="ps-health">
       <div class="ps-header" data-section="ps-health">
