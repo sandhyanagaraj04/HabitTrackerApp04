@@ -3,8 +3,9 @@
    ═══════════════════════════════════════════════════════════ */
 'use strict';
 
-/* ── RECIPE DATABASE ─────────────────────────────────────── */
+/* ── RECIPE DATABASE (100% vegetarian, egg-free) ─────────── */
 const RECIPES = {
+  // ── BREAKFAST ──
   r01: { id:'r01', name:'Classic Oatmeal', emoji:'🥣', category:'breakfast', cuisine:'American', prepTime:5, cookTime:10, servings:2, difficulty:'easy', tags:['healthy','vegetarian','high-fiber'],
     ingredients:[{name:'rolled oats',amount:1,unit:'cup',category:'grains'},{name:'milk',amount:2,unit:'cups',category:'dairy'},{name:'banana',amount:1,unit:'piece',category:'fruits'},{name:'honey',amount:2,unit:'tbsp',category:'sweeteners'},{name:'cinnamon',amount:0.5,unit:'tsp',category:'spices'}],
     instructions:['Bring milk to a gentle boil in a saucepan.','Add oats, reduce heat to medium-low.','Cook 5–7 min, stirring occasionally.','Remove from heat; rest 2 min.','Top with sliced banana, honey, and cinnamon.'],
@@ -20,15 +21,15 @@ const RECIPES = {
     instructions:['Layer yogurt in a glass or bowl.','Add mixed berries.','Top with granola and chia seeds.','Drizzle with honey and serve immediately.'],
     nutrition:{calories:290,protein:18,carbs:38,fat:5,fiber:4}},
 
-  r04: { id:'r04', name:'Scrambled Eggs & Toast', emoji:'🍳', category:'breakfast', cuisine:'American', prepTime:3, cookTime:7, servings:1, difficulty:'easy', tags:['high-protein','quick','classic'],
-    ingredients:[{name:'eggs',amount:3,unit:'pieces',category:'protein'},{name:'butter',amount:1,unit:'tbsp',category:'dairy'},{name:'whole wheat bread',amount:2,unit:'slices',category:'grains'},{name:'salt',amount:1,unit:'pinch',category:'spices'},{name:'black pepper',amount:1,unit:'pinch',category:'spices'},{name:'chives',amount:1,unit:'tbsp',category:'herbs'}],
-    instructions:['Whisk eggs with salt and pepper.','Melt butter in non-stick pan over low heat.','Add eggs; stir gently and continuously.','Remove from heat while still slightly runny.','Serve on toast, garnished with chives.'],
-    nutrition:{calories:350,protein:22,carbs:28,fat:16,fiber:3}},
+  r04: { id:'r04', name:'Masala Dosa', emoji:'🫓', category:'breakfast', cuisine:'Indian', prepTime:10, cookTime:20, servings:2, difficulty:'medium', tags:['vegan','savory','south-indian'],
+    ingredients:[{name:'dosa batter',amount:2,unit:'cups',category:'grains'},{name:'potato',amount:2,unit:'pieces',category:'vegetables'},{name:'onion',amount:1,unit:'piece',category:'vegetables'},{name:'green chilli',amount:1,unit:'piece',category:'vegetables'},{name:'mustard seeds',amount:0.5,unit:'tsp',category:'spices'},{name:'turmeric',amount:0.25,unit:'tsp',category:'spices'},{name:'coconut chutney',amount:4,unit:'tbsp',category:'condiments'},{name:'oil',amount:1,unit:'tbsp',category:'oils'}],
+    instructions:['Boil and mash potatoes with turmeric and salt.','Sauté mustard seeds, onion, chilli; mix into potato filling.','Heat dosa tawa; spread batter in a thin circle.','Add filling in centre; fold dosa over.','Serve with coconut chutney and sambar.'],
+    nutrition:{calories:310,protein:8,carbs:56,fat:7,fiber:4}},
 
-  r05: { id:'r05', name:'Banana Pancakes', emoji:'🥞', category:'breakfast', cuisine:'American', prepTime:5, cookTime:15, servings:2, difficulty:'easy', tags:['vegetarian','weekend','sweet'],
-    ingredients:[{name:'flour',amount:1,unit:'cup',category:'grains'},{name:'banana',amount:2,unit:'pieces',category:'fruits'},{name:'egg',amount:1,unit:'piece',category:'protein'},{name:'milk',amount:0.75,unit:'cup',category:'dairy'},{name:'baking powder',amount:1,unit:'tsp',category:'baking'},{name:'maple syrup',amount:2,unit:'tbsp',category:'sweeteners'}],
-    instructions:['Mash bananas thoroughly in a bowl.','Mix in egg and milk.','Fold in flour and baking powder until just combined.','Cook ladlefuls on a greased pan over medium heat.','Flip when bubbles form; cook 1–2 min more.','Serve with maple syrup.'],
-    nutrition:{calories:410,protein:11,carbs:78,fat:6,fiber:4}},
+  r05: { id:'r05', name:'Poha', emoji:'🍚', category:'breakfast', cuisine:'Indian', prepTime:5, cookTime:10, servings:2, difficulty:'easy', tags:['vegan','light','quick'],
+    ingredients:[{name:'flattened rice (poha)',amount:1.5,unit:'cups',category:'grains'},{name:'onion',amount:1,unit:'piece',category:'vegetables'},{name:'potato',amount:1,unit:'piece',category:'vegetables'},{name:'green peas',amount:0.25,unit:'cup',category:'vegetables'},{name:'mustard seeds',amount:0.5,unit:'tsp',category:'spices'},{name:'turmeric',amount:0.25,unit:'tsp',category:'spices'},{name:'lemon juice',amount:1,unit:'tbsp',category:'condiments'},{name:'fresh coriander',amount:2,unit:'tbsp',category:'herbs'}],
+    instructions:['Rinse poha and drain well.','Heat oil; splutter mustard seeds.','Sauté onion and potato until soft.','Add peas and turmeric; cook 2 min.','Add poha; mix gently and cook 3 min.','Finish with lemon juice and coriander.'],
+    nutrition:{calories:270,protein:6,carbs:52,fat:5,fiber:3}},
 
   r06: { id:'r06', name:'Overnight Chia Pudding', emoji:'🍮', category:'breakfast', cuisine:'Modern', prepTime:5, cookTime:0, servings:2, difficulty:'easy', tags:['vegan','meal-prep','no-cook'],
     ingredients:[{name:'chia seeds',amount:4,unit:'tbsp',category:'seeds'},{name:'almond milk',amount:2,unit:'cups',category:'dairy'},{name:'vanilla extract',amount:1,unit:'tsp',category:'baking'},{name:'maple syrup',amount:2,unit:'tbsp',category:'sweeteners'},{name:'mango',amount:1,unit:'piece',category:'fruits'}],
@@ -40,21 +41,21 @@ const RECIPES = {
     instructions:['Blend frozen blueberries, banana, and coconut milk until thick.','Pour into a bowl.','Top with granola, sliced kiwi, and coconut flakes.'],
     nutrition:{calories:310,protein:5,carbs:62,fat:7,fiber:8}},
 
-  r08: { id:'r08', name:'Veggie Omelette', emoji:'🥚', category:'breakfast', cuisine:'French', prepTime:5, cookTime:8, servings:1, difficulty:'easy', tags:['high-protein','low-carb','vegetarian'],
-    ingredients:[{name:'eggs',amount:3,unit:'pieces',category:'protein'},{name:'bell pepper',amount:0.5,unit:'piece',category:'vegetables'},{name:'spinach',amount:1,unit:'cup',category:'vegetables'},{name:'mushrooms',amount:0.5,unit:'cup',category:'vegetables'},{name:'feta cheese',amount:30,unit:'g',category:'dairy'},{name:'olive oil',amount:1,unit:'tsp',category:'oils'}],
-    instructions:['Whisk eggs with a pinch of salt.','Sauté vegetables in olive oil 2–3 min.','Pour eggs over vegetables; cook on low.','Add feta, fold omelette in half.','Slide onto plate.'],
-    nutrition:{calories:300,protein:24,carbs:7,fat:20,fiber:2}},
+  r08: { id:'r08', name:'Upma', emoji:'🥣', category:'breakfast', cuisine:'Indian', prepTime:5, cookTime:15, servings:2, difficulty:'easy', tags:['vegan','savory','filling'],
+    ingredients:[{name:'semolina (rava)',amount:1,unit:'cup',category:'grains'},{name:'onion',amount:1,unit:'piece',category:'vegetables'},{name:'carrot',amount:1,unit:'piece',category:'vegetables'},{name:'green peas',amount:0.25,unit:'cup',category:'vegetables'},{name:'mustard seeds',amount:0.5,unit:'tsp',category:'spices'},{name:'ginger',amount:0.5,unit:'tsp',category:'spices'},{name:'water',amount:2.5,unit:'cups',category:'liquids'},{name:'oil',amount:1,unit:'tbsp',category:'oils'}],
+    instructions:['Dry roast semolina until golden; set aside.','Heat oil; splutter mustard seeds, add ginger.','Sauté onion and vegetables 3 min.','Add water and salt; bring to boil.','Slowly add roasted semolina, stirring continuously.','Cook on low 3–4 min; serve with chutney.'],
+    nutrition:{calories:290,protein:8,carbs:54,fat:5,fiber:3}},
 
   // ── LUNCH ──
-  r09: { id:'r09', name:'Caesar Salad', emoji:'🥗', category:'lunch', cuisine:'Italian-American', prepTime:10, cookTime:0, servings:2, difficulty:'easy', tags:['classic','low-carb','no-cook'],
-    ingredients:[{name:'romaine lettuce',amount:2,unit:'cups',category:'vegetables'},{name:'chicken breast',amount:150,unit:'g',category:'protein'},{name:'parmesan',amount:30,unit:'g',category:'dairy'},{name:'croutons',amount:0.5,unit:'cup',category:'grains'},{name:'Caesar dressing',amount:3,unit:'tbsp',category:'condiments'},{name:'lemon',amount:0.5,unit:'piece',category:'fruits'}],
-    instructions:['Grill or pan-fry chicken until cooked; slice thin.','Chop romaine into bite-sized pieces.','Toss lettuce with Caesar dressing.','Top with chicken, croutons, and shaved parmesan.','Squeeze lemon juice over salad.'],
-    nutrition:{calories:380,protein:30,carbs:18,fat:20,fiber:3}},
+  r09: { id:'r09', name:'Paneer Tikka Wrap', emoji:'🌯', category:'lunch', cuisine:'Indian', prepTime:15, cookTime:15, servings:2, difficulty:'medium', tags:['vegetarian','high-protein','portable'],
+    ingredients:[{name:'paneer',amount:200,unit:'g',category:'protein'},{name:'flour tortillas',amount:2,unit:'pieces',category:'grains'},{name:'yogurt',amount:3,unit:'tbsp',category:'dairy'},{name:'tikka masala paste',amount:2,unit:'tbsp',category:'spices'},{name:'bell pepper',amount:1,unit:'piece',category:'vegetables'},{name:'onion',amount:1,unit:'piece',category:'vegetables'},{name:'mint chutney',amount:2,unit:'tbsp',category:'condiments'},{name:'lemon juice',amount:1,unit:'tbsp',category:'condiments'}],
+    instructions:['Cube paneer; marinate in yogurt and tikka paste 10 min.','Grill paneer and peppers on high heat until charred.','Warm tortillas on a dry pan.','Spread mint chutney; layer paneer, peppers, onion rings.','Squeeze lemon, roll tightly, and serve.'],
+    nutrition:{calories:440,protein:22,carbs:44,fat:18,fiber:4}},
 
-  r10: { id:'r10', name:'Grilled Chicken Wrap', emoji:'🌯', category:'lunch', cuisine:'American', prepTime:10, cookTime:15, servings:2, difficulty:'easy', tags:['high-protein','meal-prep','portable'],
-    ingredients:[{name:'chicken breast',amount:300,unit:'g',category:'protein'},{name:'flour tortillas',amount:2,unit:'pieces',category:'grains'},{name:'avocado',amount:1,unit:'piece',category:'fruits'},{name:'tomato',amount:1,unit:'piece',category:'vegetables'},{name:'lettuce',amount:1,unit:'cup',category:'vegetables'},{name:'Greek yogurt',amount:2,unit:'tbsp',category:'dairy'},{name:'lime juice',amount:1,unit:'tbsp',category:'condiments'}],
-    instructions:['Season chicken with salt, pepper, cumin.','Grill 6–7 min per side; rest and slice.','Mash avocado with lime juice.','Layer on tortilla: avocado, chicken, tomato, lettuce.','Add a dollop of Greek yogurt; roll tightly.'],
-    nutrition:{calories:450,protein:35,carbs:40,fat:14,fiber:6}},
+  r10: { id:'r10', name:'Veggie Pasta Salad', emoji:'🥗', category:'lunch', cuisine:'Italian', prepTime:10, cookTime:12, servings:3, difficulty:'easy', tags:['vegetarian','meal-prep','cold'],
+    ingredients:[{name:'fusilli pasta',amount:250,unit:'g',category:'grains'},{name:'cherry tomatoes',amount:1,unit:'cup',category:'vegetables'},{name:'cucumber',amount:1,unit:'piece',category:'vegetables'},{name:'black olives',amount:0.25,unit:'cup',category:'vegetables'},{name:'feta cheese',amount:80,unit:'g',category:'dairy'},{name:'olive oil',amount:3,unit:'tbsp',category:'oils'},{name:'lemon juice',amount:2,unit:'tbsp',category:'condiments'},{name:'dried oregano',amount:1,unit:'tsp',category:'herbs'}],
+    instructions:['Cook pasta al dente; rinse under cold water.','Halve tomatoes; dice cucumber.','Toss pasta with all vegetables.','Whisk olive oil, lemon juice, oregano for dressing.','Pour dressing over salad; top with feta.','Chill 15 min before serving.'],
+    nutrition:{calories:390,protein:13,carbs:52,fat:15,fiber:4}},
 
   r11: { id:'r11', name:'Quinoa Buddha Bowl', emoji:'🫙', category:'lunch', cuisine:'Modern', prepTime:10, cookTime:20, servings:2, difficulty:'medium', tags:['vegan','high-protein','meal-prep'],
     ingredients:[{name:'quinoa',amount:1,unit:'cup',category:'grains'},{name:'chickpeas',amount:1,unit:'can',category:'protein'},{name:'cucumber',amount:1,unit:'piece',category:'vegetables'},{name:'cherry tomatoes',amount:1,unit:'cup',category:'vegetables'},{name:'red onion',amount:0.5,unit:'piece',category:'vegetables'},{name:'tahini',amount:2,unit:'tbsp',category:'condiments'},{name:'lemon juice',amount:2,unit:'tbsp',category:'condiments'}],
@@ -66,10 +67,10 @@ const RECIPES = {
     instructions:['Sauté onion, carrot, garlic in olive oil until soft.','Add cumin; cook 1 min.','Add tomatoes, lentils, and broth.','Simmer 25–30 min until lentils are tender.','Blend partially for creamy texture.','Season and serve.'],
     nutrition:{calories:280,protein:16,carbs:44,fat:5,fiber:14}},
 
-  r13: { id:'r13', name:'Tuna Salad Sandwich', emoji:'🥪', category:'lunch', cuisine:'American', prepTime:8, cookTime:0, servings:2, difficulty:'easy', tags:['high-protein','quick','no-cook'],
-    ingredients:[{name:'canned tuna',amount:2,unit:'cans',category:'protein'},{name:'whole wheat bread',amount:4,unit:'slices',category:'grains'},{name:'celery',amount:1,unit:'stalk',category:'vegetables'},{name:'red onion',amount:0.25,unit:'piece',category:'vegetables'},{name:'mayonnaise',amount:2,unit:'tbsp',category:'condiments'},{name:'dijon mustard',amount:1,unit:'tsp',category:'condiments'},{name:'lettuce',amount:2,unit:'leaves',category:'vegetables'}],
-    instructions:['Drain and flake tuna.','Mix tuna with mayo, mustard, diced celery and onion.','Season with salt and pepper.','Spread on bread, top with lettuce.','Serve immediately or wrap for later.'],
-    nutrition:{calories:340,protein:30,carbs:32,fat:10,fiber:4}},
+  r13: { id:'r13', name:'Aloo Chaat', emoji:'🥔', category:'lunch', cuisine:'Indian', prepTime:10, cookTime:15, servings:2, difficulty:'easy', tags:['vegan','tangy','street-food'],
+    ingredients:[{name:'potato',amount:3,unit:'pieces',category:'vegetables'},{name:'tamarind chutney',amount:2,unit:'tbsp',category:'condiments'},{name:'mint chutney',amount:2,unit:'tbsp',category:'condiments'},{name:'red onion',amount:1,unit:'piece',category:'vegetables'},{name:'chaat masala',amount:1,unit:'tsp',category:'spices'},{name:'cumin powder',amount:0.5,unit:'tsp',category:'spices'},{name:'fresh coriander',amount:2,unit:'tbsp',category:'herbs'},{name:'pomegranate seeds',amount:2,unit:'tbsp',category:'fruits'}],
+    instructions:['Boil potatoes; peel and cube.','Pan-fry potato cubes until crispy.','Toss with both chutneys and spices.','Top with diced onion, coriander, pomegranate seeds.','Serve immediately.'],
+    nutrition:{calories:260,protein:5,carbs:50,fat:4,fiber:5}},
 
   r14: { id:'r14', name:'Mediterranean Bowl', emoji:'🫒', category:'lunch', cuisine:'Mediterranean', prepTime:10, cookTime:15, servings:2, difficulty:'easy', tags:['healthy','vegetarian','colorful'],
     ingredients:[{name:'brown rice',amount:1,unit:'cup',category:'grains'},{name:'falafel',amount:6,unit:'pieces',category:'protein'},{name:'hummus',amount:4,unit:'tbsp',category:'condiments'},{name:'cucumber',amount:1,unit:'piece',category:'vegetables'},{name:'kalamata olives',amount:0.25,unit:'cup',category:'vegetables'},{name:'feta cheese',amount:50,unit:'g',category:'dairy'},{name:'fresh parsley',amount:2,unit:'tbsp',category:'herbs'}],
@@ -87,55 +88,55 @@ const RECIPES = {
     nutrition:{calories:320,protein:18,carbs:8,fat:24,fiber:2}},
 
   // ── DINNER ──
-  r17: { id:'r17', name:'Pasta Bolognese', emoji:'🍝', category:'dinner', cuisine:'Italian', prepTime:10, cookTime:45, servings:4, difficulty:'medium', tags:['classic','comfort','family'],
-    ingredients:[{name:'spaghetti',amount:400,unit:'g',category:'grains'},{name:'ground beef',amount:500,unit:'g',category:'protein'},{name:'tomato sauce',amount:1,unit:'can',category:'condiments'},{name:'onion',amount:1,unit:'piece',category:'vegetables'},{name:'carrot',amount:1,unit:'piece',category:'vegetables'},{name:'celery',amount:1,unit:'stalk',category:'vegetables'},{name:'red wine',amount:0.5,unit:'cup',category:'liquids'},{name:'parmesan',amount:50,unit:'g',category:'dairy'}],
-    instructions:['Brown beef in a large pan; remove and set aside.','Sauté onion, carrot, celery until soft.','Return beef; add wine and reduce.','Add tomato sauce; simmer 30 min.','Cook pasta; toss with sauce.','Serve topped with parmesan.'],
-    nutrition:{calories:580,protein:35,carbs:65,fat:18,fiber:5}},
+  r17: { id:'r17', name:'Paneer Butter Masala', emoji:'🍛', category:'dinner', cuisine:'Indian', prepTime:10, cookTime:30, servings:4, difficulty:'medium', tags:['vegetarian','rich','comfort'],
+    ingredients:[{name:'paneer',amount:300,unit:'g',category:'protein'},{name:'tomatoes',amount:4,unit:'pieces',category:'vegetables'},{name:'onion',amount:2,unit:'pieces',category:'vegetables'},{name:'garlic',amount:4,unit:'cloves',category:'vegetables'},{name:'ginger',amount:1,unit:'tsp',category:'spices'},{name:'butter',amount:2,unit:'tbsp',category:'dairy'},{name:'cream',amount:4,unit:'tbsp',category:'dairy'},{name:'garam masala',amount:1,unit:'tsp',category:'spices'},{name:'basmati rice',amount:2,unit:'cups',category:'grains'}],
+    instructions:['Blend tomatoes, onion, garlic, ginger into a smooth purée.','Cook purée in butter until oil separates (10 min).','Add garam masala and salt; cook 2 min.','Add paneer cubes; simmer 8 min.','Stir in cream; cook 2 min more.','Serve with steamed basmati rice.'],
+    nutrition:{calories:530,protein:22,carbs:58,fat:22,fiber:4}},
 
-  r18: { id:'r18', name:'Grilled Salmon & Veggies', emoji:'🐟', category:'dinner', cuisine:'American', prepTime:10, cookTime:20, servings:2, difficulty:'easy', tags:['healthy','omega-3','low-carb'],
-    ingredients:[{name:'salmon fillets',amount:2,unit:'pieces',category:'protein'},{name:'asparagus',amount:200,unit:'g',category:'vegetables'},{name:'cherry tomatoes',amount:1,unit:'cup',category:'vegetables'},{name:'lemon',amount:1,unit:'piece',category:'fruits'},{name:'garlic',amount:2,unit:'cloves',category:'vegetables'},{name:'olive oil',amount:2,unit:'tbsp',category:'oils'},{name:'dill',amount:1,unit:'tbsp',category:'herbs'}],
-    instructions:['Marinate salmon with lemon juice, garlic, dill, olive oil.','Heat grill or pan over high heat.','Grill salmon 4 min per side.','Toss asparagus and tomatoes with olive oil; roast or grill 10 min.','Serve salmon on vegetables with lemon wedges.'],
-    nutrition:{calories:410,protein:38,carbs:12,fat:22,fiber:4}},
+  r18: { id:'r18', name:'Vegetable Fried Rice', emoji:'🍳', category:'dinner', cuisine:'Asian', prepTime:10, cookTime:15, servings:3, difficulty:'easy', tags:['vegan','quick','meal-prep'],
+    ingredients:[{name:'cooked rice',amount:3,unit:'cups',category:'grains'},{name:'carrot',amount:1,unit:'piece',category:'vegetables'},{name:'green peas',amount:0.5,unit:'cup',category:'vegetables'},{name:'corn',amount:0.5,unit:'cup',category:'vegetables'},{name:'spring onion',amount:3,unit:'stalks',category:'vegetables'},{name:'soy sauce',amount:3,unit:'tbsp',category:'condiments'},{name:'sesame oil',amount:1,unit:'tsp',category:'oils'},{name:'garlic',amount:3,unit:'cloves',category:'vegetables'},{name:'ginger',amount:0.5,unit:'tsp',category:'spices'}],
+    instructions:['Use day-old rice for best results.','Stir-fry garlic and ginger in hot oil 30 sec.','Add carrots, peas, corn; stir-fry 3 min.','Add rice; toss on high heat 3 min.','Add soy sauce and sesame oil; mix well.','Garnish with spring onion and serve.'],
+    nutrition:{calories:380,protein:9,carbs:68,fat:8,fiber:5}},
 
-  r19: { id:'r19', name:'Chicken Stir-Fry', emoji:'🥘', category:'dinner', cuisine:'Asian', prepTime:15, cookTime:15, servings:3, difficulty:'medium', tags:['healthy','quick','asian'],
-    ingredients:[{name:'chicken breast',amount:400,unit:'g',category:'protein'},{name:'broccoli',amount:2,unit:'cups',category:'vegetables'},{name:'bell pepper',amount:2,unit:'pieces',category:'vegetables'},{name:'snap peas',amount:1,unit:'cup',category:'vegetables'},{name:'soy sauce',amount:3,unit:'tbsp',category:'condiments'},{name:'ginger',amount:1,unit:'tsp',category:'spices'},{name:'garlic',amount:3,unit:'cloves',category:'vegetables'},{name:'sesame oil',amount:1,unit:'tsp',category:'oils'},{name:'jasmine rice',amount:1.5,unit:'cups',category:'grains'}],
-    instructions:['Cook rice.','Cut chicken into thin strips; stir-fry in hot oil 5 min.','Add garlic and ginger; cook 1 min.','Add vegetables; stir-fry 4–5 min.','Add soy sauce and sesame oil; toss.','Serve over rice.'],
-    nutrition:{calories:490,protein:38,carbs:52,fat:11,fiber:6}},
+  r19: { id:'r19', name:'Tofu Stir-Fry', emoji:'🥢', category:'dinner', cuisine:'Asian', prepTime:15, cookTime:15, servings:3, difficulty:'medium', tags:['vegan','high-protein','asian'],
+    ingredients:[{name:'firm tofu',amount:400,unit:'g',category:'protein'},{name:'broccoli',amount:2,unit:'cups',category:'vegetables'},{name:'bell pepper',amount:2,unit:'pieces',category:'vegetables'},{name:'snap peas',amount:1,unit:'cup',category:'vegetables'},{name:'soy sauce',amount:3,unit:'tbsp',category:'condiments'},{name:'ginger',amount:1,unit:'tsp',category:'spices'},{name:'garlic',amount:3,unit:'cloves',category:'vegetables'},{name:'sesame oil',amount:1,unit:'tsp',category:'oils'},{name:'jasmine rice',amount:1.5,unit:'cups',category:'grains'}],
+    instructions:['Press tofu dry; cut into cubes.','Cook rice.','Pan-fry tofu in oil until golden on all sides (8 min).','Add garlic, ginger, vegetables; stir-fry 4–5 min.','Add soy sauce and sesame oil; toss.','Serve over rice.'],
+    nutrition:{calories:420,protein:24,carbs:52,fat:12,fiber:6}},
 
   r20: { id:'r20', name:'Vegetable Curry', emoji:'🍛', category:'dinner', cuisine:'Indian', prepTime:10, cookTime:30, servings:4, difficulty:'medium', tags:['vegan','spicy','meal-prep'],
     ingredients:[{name:'chickpeas',amount:2,unit:'cans',category:'protein'},{name:'spinach',amount:2,unit:'cups',category:'vegetables'},{name:'tomatoes',amount:2,unit:'pieces',category:'vegetables'},{name:'onion',amount:1,unit:'piece',category:'vegetables'},{name:'coconut milk',amount:1,unit:'can',category:'dairy'},{name:'curry powder',amount:2,unit:'tbsp',category:'spices'},{name:'garam masala',amount:1,unit:'tsp',category:'spices'},{name:'basmati rice',amount:2,unit:'cups',category:'grains'}],
     instructions:['Sauté onion until golden.','Add curry powder and garam masala; cook 1 min.','Add diced tomatoes; cook 5 min.','Add chickpeas and coconut milk; simmer 15 min.','Stir in spinach until wilted.','Serve with basmati rice.'],
     nutrition:{calories:520,protein:18,carbs:74,fat:16,fiber:13}},
 
-  r21: { id:'r21', name:'Beef Tacos', emoji:'🌮', category:'dinner', cuisine:'Mexican', prepTime:10, cookTime:15, servings:4, difficulty:'easy', tags:['fun','family','quick'],
-    ingredients:[{name:'ground beef',amount:400,unit:'g',category:'protein'},{name:'corn tortillas',amount:8,unit:'pieces',category:'grains'},{name:'taco seasoning',amount:2,unit:'tbsp',category:'spices'},{name:'cheddar cheese',amount:100,unit:'g',category:'dairy'},{name:'salsa',amount:0.5,unit:'cup',category:'condiments'},{name:'sour cream',amount:4,unit:'tbsp',category:'dairy'},{name:'avocado',amount:1,unit:'piece',category:'fruits'},{name:'lime',amount:1,unit:'piece',category:'fruits'}],
-    instructions:['Brown ground beef; drain fat.','Add taco seasoning and 0.25 cup water; simmer 3 min.','Warm tortillas on a dry pan.','Assemble: beef, cheese, salsa, sour cream, sliced avocado.','Squeeze lime juice and serve.'],
-    nutrition:{calories:540,protein:30,carbs:42,fat:26,fiber:6}},
+  r21: { id:'r21', name:'Pasta Arrabbiata', emoji:'🍝', category:'dinner', cuisine:'Italian', prepTime:5, cookTime:25, servings:4, difficulty:'easy', tags:['vegan','spicy','classic'],
+    ingredients:[{name:'penne pasta',amount:400,unit:'g',category:'grains'},{name:'tomato passata',amount:2,unit:'cups',category:'condiments'},{name:'garlic',amount:5,unit:'cloves',category:'vegetables'},{name:'red chilli flakes',amount:1,unit:'tsp',category:'spices'},{name:'olive oil',amount:3,unit:'tbsp',category:'oils'},{name:'fresh basil',amount:10,unit:'leaves',category:'herbs'},{name:'parmesan',amount:40,unit:'g',category:'dairy'}],
+    instructions:['Cook penne al dente.','Sauté garlic in olive oil until golden.','Add chilli flakes; cook 30 sec.','Add passata; simmer 15 min until thick.','Toss with pasta; season well.','Serve with fresh basil and parmesan.'],
+    nutrition:{calories:460,protein:14,carbs:76,fat:11,fiber:5}},
 
-  r22: { id:'r22', name:'Baked Lemon Chicken', emoji:'🍗', category:'dinner', cuisine:'American', prepTime:10, cookTime:35, servings:4, difficulty:'easy', tags:['meal-prep','healthy','family'],
-    ingredients:[{name:'chicken thighs',amount:4,unit:'pieces',category:'protein'},{name:'lemon',amount:2,unit:'pieces',category:'fruits'},{name:'garlic',amount:4,unit:'cloves',category:'vegetables'},{name:'fresh rosemary',amount:2,unit:'sprigs',category:'herbs'},{name:'olive oil',amount:3,unit:'tbsp',category:'oils'},{name:'baby potatoes',amount:400,unit:'g',category:'vegetables'}],
-    instructions:['Preheat oven to 200°C.','Toss potatoes with olive oil, garlic, salt.','Place chicken in baking dish; drizzle with lemon juice and olive oil.','Add rosemary sprigs and lemon slices.','Roast 30–35 min until golden.','Rest 5 min before serving.'],
-    nutrition:{calories:460,protein:34,carbs:28,fat:22,fiber:3}},
+  r22: { id:'r22', name:'Stuffed Bell Peppers', emoji:'🫑', category:'dinner', cuisine:'Mediterranean', prepTime:15, cookTime:35, servings:4, difficulty:'medium', tags:['vegetarian','colorful','wholesome'],
+    ingredients:[{name:'bell peppers',amount:4,unit:'pieces',category:'vegetables'},{name:'brown rice',amount:1,unit:'cup',category:'grains'},{name:'black beans',amount:1,unit:'can',category:'protein'},{name:'corn',amount:0.5,unit:'cup',category:'vegetables'},{name:'tomato sauce',amount:1,unit:'cup',category:'condiments'},{name:'cumin',amount:1,unit:'tsp',category:'spices'},{name:'cheddar cheese',amount:80,unit:'g',category:'dairy'},{name:'fresh coriander',amount:2,unit:'tbsp',category:'herbs'}],
+    instructions:['Cook rice; preheat oven to 190°C.','Halve peppers lengthways; remove seeds.','Mix rice, beans, corn, tomato sauce, cumin.','Fill pepper halves with rice mixture.','Top with cheese; bake 25–30 min.','Garnish with coriander.'],
+    nutrition:{calories:420,protein:16,carbs:66,fat:10,fiber:10}},
 
   r23: { id:'r23', name:'Mushroom Risotto', emoji:'🍄', category:'dinner', cuisine:'Italian', prepTime:10, cookTime:35, servings:4, difficulty:'medium', tags:['vegetarian','creamy','comfort'],
     ingredients:[{name:'arborio rice',amount:1.5,unit:'cups',category:'grains'},{name:'mixed mushrooms',amount:400,unit:'g',category:'vegetables'},{name:'vegetable broth',amount:5,unit:'cups',category:'liquids'},{name:'white wine',amount:0.5,unit:'cup',category:'liquids'},{name:'onion',amount:1,unit:'piece',category:'vegetables'},{name:'garlic',amount:3,unit:'cloves',category:'vegetables'},{name:'parmesan',amount:80,unit:'g',category:'dairy'},{name:'butter',amount:2,unit:'tbsp',category:'dairy'},{name:'thyme',amount:1,unit:'tsp',category:'herbs'}],
     instructions:['Sauté mushrooms until golden; set aside.','Sauté onion and garlic in butter.','Add rice; toast 2 min.','Add wine; stir until absorbed.','Add broth ladle by ladle, stirring constantly.','Stir in mushrooms, parmesan, butter.','Season and serve immediately.'],
     nutrition:{calories:480,protein:14,carbs:68,fat:14,fiber:3}},
 
-  r24: { id:'r24', name:'Shrimp Garlic Pasta', emoji:'🍤', category:'dinner', cuisine:'Italian', prepTime:10, cookTime:20, servings:3, difficulty:'easy', tags:['seafood','quick','elegant'],
-    ingredients:[{name:'linguine',amount:300,unit:'g',category:'grains'},{name:'shrimp',amount:400,unit:'g',category:'protein'},{name:'garlic',amount:5,unit:'cloves',category:'vegetables'},{name:'cherry tomatoes',amount:1,unit:'cup',category:'vegetables'},{name:'white wine',amount:0.5,unit:'cup',category:'liquids'},{name:'olive oil',amount:3,unit:'tbsp',category:'oils'},{name:'fresh parsley',amount:3,unit:'tbsp',category:'herbs'},{name:'lemon',amount:1,unit:'piece',category:'fruits'}],
-    instructions:['Cook linguine al dente; reserve pasta water.','Sauté garlic in olive oil 1 min.','Add shrimp; cook 2 min per side.','Add tomatoes and wine; simmer 3 min.','Toss with pasta; add pasta water if needed.','Finish with parsley and lemon juice.'],
-    nutrition:{calories:490,protein:32,carbs:58,fat:12,fiber:3}},
+  r24: { id:'r24', name:'Aloo Palak', emoji:'🥬', category:'dinner', cuisine:'Indian', prepTime:10, cookTime:25, servings:4, difficulty:'easy', tags:['vegan','iron-rich','comfort'],
+    ingredients:[{name:'spinach',amount:4,unit:'cups',category:'vegetables'},{name:'potato',amount:3,unit:'pieces',category:'vegetables'},{name:'onion',amount:1,unit:'piece',category:'vegetables'},{name:'garlic',amount:3,unit:'cloves',category:'vegetables'},{name:'ginger',amount:1,unit:'tsp',category:'spices'},{name:'cumin seeds',amount:0.5,unit:'tsp',category:'spices'},{name:'garam masala',amount:0.5,unit:'tsp',category:'spices'},{name:'roti / flatbread',amount:4,unit:'pieces',category:'grains'}],
+    instructions:['Boil potato cubes until just tender.','Blanch spinach 1 min; blend to a purée.','Sauté cumin, garlic, ginger, onion until golden.','Add potatoes; cook 3 min.','Pour in spinach purée; simmer 8 min.','Add garam masala; serve with warm roti.'],
+    nutrition:{calories:350,protein:10,carbs:56,fat:8,fiber:8}},
 
   r25: { id:'r25', name:'Dal Tadka & Naan', emoji:'🫓', category:'dinner', cuisine:'Indian', prepTime:10, cookTime:30, servings:4, difficulty:'easy', tags:['vegan','high-protein','comfort'],
     ingredients:[{name:'yellow lentils',amount:1.5,unit:'cups',category:'protein'},{name:'onion',amount:1,unit:'piece',category:'vegetables'},{name:'tomatoes',amount:2,unit:'pieces',category:'vegetables'},{name:'garlic',amount:4,unit:'cloves',category:'vegetables'},{name:'cumin seeds',amount:1,unit:'tsp',category:'spices'},{name:'turmeric',amount:0.5,unit:'tsp',category:'spices'},{name:'naan bread',amount:4,unit:'pieces',category:'grains'},{name:'ghee',amount:2,unit:'tbsp',category:'oils'}],
     instructions:['Boil lentils with turmeric until soft (20 min).','Heat ghee; add cumin seeds until they splutter.','Add onion, garlic, tomatoes; cook until oil separates.','Pour tadka over lentils; stir well.','Simmer 5 min.','Serve with warm naan.'],
     nutrition:{calories:440,protein:20,carbs:62,fat:12,fiber:11}},
 
-  r26: { id:'r26', name:'BBQ Chicken Bowl', emoji:'🍖', category:'dinner', cuisine:'American', prepTime:10, cookTime:25, servings:2, difficulty:'easy', tags:['meal-prep','smoky','high-protein'],
-    ingredients:[{name:'chicken breast',amount:300,unit:'g',category:'protein'},{name:'BBQ sauce',amount:4,unit:'tbsp',category:'condiments'},{name:'brown rice',amount:1,unit:'cup',category:'grains'},{name:'corn',amount:0.5,unit:'cup',category:'vegetables'},{name:'black beans',amount:1,unit:'can',category:'protein'},{name:'red onion',amount:0.25,unit:'piece',category:'vegetables'},{name:'cheddar cheese',amount:50,unit:'g',category:'dairy'}],
-    instructions:['Cook rice.','Grill chicken, brushing with BBQ sauce.','Rest and slice chicken.','Drain and warm black beans.','Assemble bowls: rice, beans, corn, chicken.','Top with cheese and extra BBQ sauce.'],
-    nutrition:{calories:570,protein:42,carbs:64,fat:13,fiber:9}},
+  r26: { id:'r26', name:'Pasta Primavera', emoji:'🍝', category:'dinner', cuisine:'Italian', prepTime:10, cookTime:20, servings:3, difficulty:'easy', tags:['vegetarian','spring','light'],
+    ingredients:[{name:'penne pasta',amount:300,unit:'g',category:'grains'},{name:'zucchini',amount:1,unit:'piece',category:'vegetables'},{name:'cherry tomatoes',amount:1,unit:'cup',category:'vegetables'},{name:'bell pepper',amount:1,unit:'piece',category:'vegetables'},{name:'asparagus',amount:150,unit:'g',category:'vegetables'},{name:'garlic',amount:3,unit:'cloves',category:'vegetables'},{name:'olive oil',amount:3,unit:'tbsp',category:'oils'},{name:'parmesan',amount:40,unit:'g',category:'dairy'},{name:'fresh basil',amount:8,unit:'leaves',category:'herbs'}],
+    instructions:['Cook pasta al dente; reserve 0.5 cup pasta water.','Sauté garlic in olive oil 1 min.','Add all vegetables; cook 5–6 min until tender.','Toss vegetables with pasta and pasta water.','Season well; top with parmesan and basil.'],
+    nutrition:{calories:450,protein:15,carbs:68,fat:13,fiber:6}},
 
   // ── SNACKS ──
   r27: { id:'r27', name:'Hummus & Veggie Plate', emoji:'🥕', category:'snack', cuisine:'Middle Eastern', prepTime:5, cookTime:0, servings:2, difficulty:'easy', tags:['vegan','healthy','no-cook'],
@@ -244,7 +245,10 @@ function setMeal(date, slot, recipeId) {
 }
 
 function getMeal(date, slot) {
-  return (mealPlan[date] && mealPlan[date][slot]) ? RECIPES[mealPlan[date][slot]] : null;
+  const id = mealPlan[date] && mealPlan[date][slot];
+  if (!id) return null;
+  if (id.startsWith('custom:')) return { emoji: '✏️', name: id.slice(7), prepTime: 0, cookTime: 0, isCustom: true };
+  return RECIPES[id] || null;
 }
 
 /* ── DATE UTILS ─────────────────────────────────────────── */
@@ -493,12 +497,13 @@ function renderWeekView() {
 
 function slotHTML(date, slot, recipe) {
   if (recipe) {
+    const timeRow = recipe.isCustom ? '' : `<div class="slot-time">${recipe.prepTime+recipe.cookTime} min</div>`;
     return `<div class="meal-slot has-recipe" data-date="${date}" data-slot="${slot}">
       <button class="slot-remove" data-date="${date}" data-slot="${slot}" title="Remove">✕</button>
       <div class="slot-label">${SLOT_ICONS[slot]} ${slot}</div>
       <span class="slot-emoji">${recipe.emoji}</span>
       <div class="slot-name">${recipe.name}</div>
-      <div class="slot-time">${recipe.prepTime+recipe.cookTime} min</div>
+      ${timeRow}
     </div>`;
   }
   return `<div class="meal-slot" data-date="${date}" data-slot="${slot}">
@@ -517,7 +522,11 @@ function renderMonthView() {
     const d      = dateObj(str);
     const isToday= str === today;
     const day    = mealPlan[str] || {};
-    const meals  = MEAL_SLOTS.map(s => day[s] && RECIPES[day[s]] ? `<div class="mc-pill">${RECIPES[day[s]].emoji} ${RECIPES[day[s]].name}</div>` : '').filter(Boolean).join('');
+    const meals  = MEAL_SLOTS.map(s => {
+      const id = day[s]; if (!id) return '';
+      const r = id.startsWith('custom:') ? { emoji: '✏️', name: id.slice(7) } : RECIPES[id];
+      return r ? `<div class="mc-pill">${r.emoji} ${r.name}</div>` : '';
+    }).filter(Boolean).join('');
 
     return `<div class="month-cell${isToday?' is-today':''}${other?' other-month':''}" data-date="${str}">
       <div class="mc-date">${d.getDate()}</div>
@@ -610,6 +619,7 @@ function openSlotPicker(date, slot) {
     });
   });
 
+  document.getElementById('slotCustomInput').value = '';
   document.getElementById('slotPickerModal').classList.add('open');
 }
 
@@ -623,6 +633,14 @@ function assignRecipe(date, slot, recipeId) {
   renderGroceryPanel();
   const r = RECIPES[recipeId];
   if (r) showToast(`${r.emoji} ${r.name} added to ${slot}`);
+}
+
+function assignCustomMeal(date, slot, name) {
+  setMeal(date, slot, 'custom:' + name);
+  renderWeekView();
+  if (currentView==='month') renderMonthView();
+  renderGroceryPanel();
+  showToast(`✏️ "${name}" added to ${slot}`);
 }
 
 /* ── SIDEBAR TAB SWITCH ─────────────────────────────────── */
@@ -694,6 +712,22 @@ function bindEvents() {
   document.getElementById('recipeModal').addEventListener('click', e => { if(e.target===document.getElementById('recipeModal')) closeRecipeModal(); });
   document.getElementById('slotPickerModal').addEventListener('click', e => { if(e.target===document.getElementById('slotPickerModal')) closeSlotPicker(); });
   document.getElementById('slotPickerCancel').addEventListener('click', closeSlotPicker);
+
+  // Custom meal entry
+  document.getElementById('slotCustomBtn').addEventListener('click', () => {
+    const name = document.getElementById('slotCustomInput').value.trim();
+    if (!name || !pendingSlot) return;
+    assignCustomMeal(pendingSlot.date, pendingSlot.slot, name);
+    closeSlotPicker();
+  });
+  document.getElementById('slotCustomInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const name = e.target.value.trim();
+      if (!name || !pendingSlot) return;
+      assignCustomMeal(pendingSlot.date, pendingSlot.slot, name);
+      closeSlotPicker();
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
