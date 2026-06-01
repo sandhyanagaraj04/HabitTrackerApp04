@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>Dashboard — Habit & Meal Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="auth.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --bg:#0a0e1a;--bg2:#0f1524;--bg3:#151c30;
+      --surface:rgba(255,255,255,0.04);--surface2:rgba(255,255,255,0.07);
+      --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.13);
+      --text:#f0f4ff;--text2:#8b9abf;--text3:#5a6a8a;
+      --green:#34d399;--purple:#a78bfa;--orange:#fb923c;--blue:#60a5fa;--red:#f87171;--yellow:#fbbf24;
+      --radius:16px;--radius-sm:10px;
+    }
+    html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+
+    /* ── LOGIN ── */
+    #loginScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;text-align:center;}
+    .login-logo{font-size:4rem;margin-bottom:1.5rem;filter:drop-shadow(0 0 30px rgba(167,139,250,0.4));}
+    .login-title{font-size:2rem;font-weight:800;background:linear-gradient(135deg,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem;}
+    .login-sub{color:var(--text2);font-size:1rem;margin-bottom:2.5rem;max-width:340px;line-height:1.6;}
+    .login-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:2rem;width:100%;max-width:360px;}
+    .login-card h3{font-size:1rem;font-weight:600;margin-bottom:1.25rem;color:var(--text2);}
+    #google-btn-container{display:flex;justify-content:center;margin-bottom:1rem;min-height:44px;}
+    .oauth-note{font-size:.75rem;color:var(--text3);margin-bottom:1.25rem;}
+    .divider{display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;}
+    .divider-line{flex:1;height:1px;background:var(--border);}
+    .divider-text{font-size:.75rem;color:var(--text3);}
+    .guest-btn{width:100%;padding:.75rem;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border2);color:var(--text2);font-size:.9rem;font-weight:500;cursor:pointer;transition:background .2s,color .2s;}
+    .guest-btn:hover{background:var(--surface);color:var(--text);}
+    .setup-hint{margin-top:1.5rem;font-size:.75rem;color:var(--text3);background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.15);border-radius:var(--radius-sm);padding:.75rem;text-align:left;line-height:1.6;max-width:360px;}
+    .setup-hint code{color:var(--blue);font-family:monospace;font-size:.7rem;}
+
+    /* ── APP ── */
+    #appScreen{display:none;min-height:100vh;flex-direction:column;}
+    #appScreen.visible{display:flex;}
+
+    .top-nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;}
+    .nav-brand-icon{font-size:1.4rem;}
+    .nav-brand-name{font-weight:700;font-size:1rem;background:linear-gradient(90deg,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .nav-right{display:flex;align-items:center;gap:.75rem;}
+    .nav-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#34d399);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;color:var(--bg);overflow:hidden;cursor:pointer;}
+    .nav-avatar img{width:100%;height:100%;object-fit:cover;}
+    .nav-logout{font-size:.75rem;color:var(--text3);cursor:pointer;padding:.4rem .75rem;border:1px solid var(--border);border-radius:20px;background:transparent;transition:color .2s,border-color .2s;}
+    .nav-logout:hover{color:var(--red);border-color:var(--red);}
+
+    .dash-body{flex:1;padding:1.25rem;max-width:900px;margin:0 auto;width:100%;}
+    .welcome-row{margin-bottom:1.5rem;}
+    .welcome-title{font-size:1.5rem;font-weight:700;}
+    .welcome-date{font-size:.85rem;color:var(--text2);margin-top:.2rem;}
+
+    /* APP TILES */
+    .app-tiles{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+    .app-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;cursor:pointer;text-decoration:none;color:inherit;display:block;transition:transform .15s,border-color .15s,background .15s;position:relative;overflow:hidden;}
+    .app-tile:hover{transform:translateY(-2px);background:var(--surface2);border-color:var(--border2);}
+    .app-tile::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius) var(--radius) 0 0;}
+    .tile-habit::before{background:linear-gradient(90deg,#34d399,#059669);}
+    .tile-meals::before{background:linear-gradient(90deg,#fb923c,#f59e0b);}
+    .tile-icon{font-size:2rem;margin-bottom:.75rem;}
+    .tile-name{font-weight:700;font-size:1rem;margin-bottom:.25rem;}
+    .tile-desc{font-size:.78rem;color:var(--text2);line-height:1.4;}
+    .tile-arrow{position:absolute;top:1rem;right:1rem;color:var(--text3);font-size:1rem;}
+
+    /* STATS */
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.5rem;}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;text-align:center;}
+    .stat-val{font-size:1.8rem;font-weight:800;line-height:1;margin-bottom:.25rem;}
+    .stat-label{font-size:.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
+    .stat-green{color:var(--green);}
+    .stat-orange{color:var(--orange);}
+    .stat-purple{color:var(--purple);}
+
+    .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+    .section-title{font-size:.9rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;}
+    .section-link{font-size:.78rem;color:var(--blue);text-decoration:none;}
+    .section-link:hover{text-decoration:underline;}
+
+    /* HABIT SUMMARY */
+    .habit-summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.5rem;}
+    .habit-row{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+    .habit-item{display:flex;align-items:center;gap:.4rem;font-size:.82rem;}
+    .habit-dot{width:8px;height:8px;border-radius:50%;}
+    .dot-done{background:var(--green);}
+    .dot-empty{background:var(--text3);}
+    .no-data-msg{color:var(--text3);font-size:.85rem;text-align:center;padding:.5rem;}
+
+    /* MEAL WEEK */
+    .meal-week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:.4rem;margin-bottom:1.5rem;}
+    .meal-day-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.5rem .3rem;text-align:center;cursor:pointer;transition:border-color .15s;text-decoration:none;color:inherit;display:block;}
+    .meal-day-card:hover{border-color:var(--border2);}
+    .meal-day-card.today{border-color:var(--orange);}
+    .mdc-name{font-size:.65rem;color:var(--text3);margin-bottom:.2rem;text-transform:uppercase;}
+    .mdc-num{font-size:.9rem;font-weight:700;margin-bottom:.3rem;}
+    .mdc-dots{display:flex;gap:2px;justify-content:center;}
+    .mdc-dot{width:5px;height:5px;border-radius:50%;background:var(--text3);}
+    .mdc-dot.filled{background:var(--orange);}
+
+    /* GROCERY */
+    .grocery-preview{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;}
+    .grocery-list-preview{list-style:none;margin-top:.75rem;}
+    .grocery-list-preview li{display:flex;align-items:center;gap:.5rem;font-size:.85rem;padding:.35rem 0;border-bottom:1px solid var(--border);color:var(--text2);}
+    .grocery-list-preview li:last-child{border-bottom:none;}
+    .grocery-cat-badge{font-size:.65rem;background:var(--surface2);border-radius:4px;padding:.1rem .4rem;color:var(--text3);}
+    .grocery-empty{color:var(--text3);font-size:.85rem;text-align:center;padding:1rem;}
+    .view-all-btn{display:block;text-align:center;margin-top:.75rem;padding:.6rem;border-radius:var(--radius-sm);background:linear-gradient(135deg,rgba(251,146,60,.15),rgba(245,158,11,.1));border:1px solid rgba(251,146,60,.25);color:var(--orange);font-size:.82rem;font-weight:600;text-decoration:none;cursor:pointer;transition:background .2s;}
+    .view-all-btn:hover{background:linear-gradient(135deg,rgba(251,146,60,.25),rgba(245,158,11,.2));}
+
+    /* MINI RING */
+    .mini-ring-wrap{display:inline-flex;align-items:center;gap:.5rem;}
+    .mini-ring{width:38px;height:38px;}
+    .ring-bg-m{fill:none;stroke:rgba(255,255,255,.06);stroke-width:3;}
+    .ring-fill-m{fill:none;stroke-width:3;stroke-linecap:round;transform-origin:center;transform:rotate(-90deg);transition:stroke-dasharray .4s;}
+
+    @media(max-width:600px){
+      .app-tiles{grid-template-columns:1fr;}
+      .top-nav{padding:.75rem 1rem;}
+      .dash-body{padding:1rem;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-logo">✦</div>
+  <div class="login-title">Habit & Meal Tracker</div>
+  <p class="login-sub">Track daily habits, plan meals for the week, and auto-generate grocery lists — all in one place.</p>
+  <div class="login-card">
+    <h3>Sign in to continue</h3>
+    <div id="google-btn-container"></div>
+    <p class="oauth-note" id="oauthNote"></p>
+    <div class="divider"><div class="divider-line"></div><span class="divider-text">or</span><div class="divider-line"></div></div>
+    <button class="guest-btn" id="guestBtn">Continue as Guest →</button>
+  </div>
+  <div class="setup-hint" id="setupHint" style="display:none">
+    <strong>Enable Google Sign-In:</strong><br>
+    1. Get a Client ID at <code>console.cloud.google.com</code><br>
+    2. Enable the <code>Google Identity Services API</code><br>
+    3. Add your domain to Authorized JavaScript Origins<br>
+    4. Replace <code>YOUR_GOOGLE_CLIENT_ID</code> in <code>auth.js</code>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen">
+  <nav class="top-nav">
+    <div class="nav-brand">
+      <span class="nav-brand-icon">✦</span>
+      <span class="nav-brand-name">Habit & Meal Tracker</span>
+    </div>
+    <div class="nav-right">
+      <div class="nav-avatar" id="navAvatar"></div>
+      <button class="nav-logout" id="logoutBtn">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="dash-body">
+    <div class="welcome-row">
+      <div class="welcome-title" id="welcomeTitle">Welcome back!</div>
+      <div class="welcome-date" id="welcomeDate"></div>
+    </div>
+
+    <div class="app-tiles">
+      <a href="index.html" class="app-tile tile-habit">
+        <span class="tile-arrow">→</span>
+        <div class="tile-icon">📋</div>
+        <div class="tile-name">Habit Tracker</div>
+        <div class="tile-desc">Log sleep, activity, meals &amp; daily sadhana practices</div>
+      </a>
+      <a href="meal-planner.html" class="app-tile tile-meals">
+        <span class="tile-arrow">→</span>
+        <div class="tile-icon">🥗</div>
+        <div class="tile-name">Meal Planner</div>
+        <div class="tile-desc">32 recipes — plan weekly meals &amp; get a grocery list</div>
+      </a>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val stat-green" id="statStreak">0</div><div class="stat-label">🔥 Streak</div></div>
+      <div class="stat-card"><div class="stat-val stat-purple" id="statHabitPct">0%</div><div class="stat-label">Today Habits</div></div>
+      <div class="stat-card"><div class="stat-val stat-orange" id="statMealsPlanned">0</div><div class="stat-label">Meals Planned</div></div>
+    </div>
+
+    <div class="section-header">
+      <span class="section-title">Today's Habits</span>
+      <a href="index.html" class="section-link">Open tracker →</a>
+    </div>
+    <div class="habit-summary-card" id="habitSummaryCard">
+      <div class="no-data-msg">No habits logged yet today.</div>
+    </div>
+
+    <div class="section-header" style="margin-top:1.25rem;">
+      <span class="section-title">This Week's Meals</span>
+      <a href="meal-planner.html" class="section-link">Plan meals →</a>
+    </div>
+    <div class="meal-week-grid" id="mealWeekGrid"></div>
+
+    <div class="section-header">
+      <span class="section-title">This Week's Groceries</span>
+      <a href="meal-planner.html#grocery" class="section-link">View list →</a>
+    </div>
+    <div class="grocery-preview" id="groceryPreview">
+      <div class="grocery-empty">Plan some meals to auto-generate your grocery list.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAY_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTH_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function dateObj(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function offsetDate(s,n){const d=dateObj(s);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
+function getWeekDates(s){const d=dateObj(s),day=d.getDay();const mon=new Date(d);mon.setDate(d.getDate()-day+(day===0?-6:1));return Array.from({length:7},(_,i)=>{const t=new Date(mon);t.setDate(mon.getDate()+i);return t.toISOString().slice(0,10);});}
+
+function calcStreak(){
+  const raw=localStorage.getItem('habitTracker_v1');if(!raw)return 0;
+  let data;try{data=JSON.parse(raw);}catch{return 0;}
+  let streak=0,d=todayStr();
+  while(true){const day=data[d];if(!day)break;const h=day.health||{},s=day.sadhana||{};
+    if(h.sleep_time||h.wake_time||h.steps||Object.values(s).some(Boolean)){streak++;d=offsetDate(d,-1);}else break;}
+  return streak;
+}
+function getHabitToday(){const raw=localStorage.getItem('habitTracker_v1');if(!raw)return null;try{return JSON.parse(raw)[todayStr()]||null;}catch{return null;}}
+function hCompletion(h){if(!h)return 0;const f=[h.sleep_time,h.wake_time,h.sleep_quality>0,h.greyscale_on,h.steps>0,h.heart_points>0,h.breakfast_source,h.lunch_source,h.dinner_source,h.breakfast,h.lunch,h.dinner];return Math.round(f.filter(Boolean).length/f.length*100);}
+function sCompletion(s){if(!s)return 0;const v=Object.values(s);return Math.round(v.filter(Boolean).length/v.length*100);}
+function getMealPlan(){try{return JSON.parse(localStorage.getItem('meal_plan_v1')||'{}');}catch{return {};}}
+
+function miniRing(pct,color){const c=2*Math.PI*14,f=(pct/100)*c;return`<svg class="mini-ring" viewBox="0 0 36 36"><circle class="ring-bg-m" cx="18" cy="18" r="14"/><circle class="ring-fill-m" cx="18" cy="18" r="14" stroke="${color}" stroke-dasharray="${f.toFixed(1)} ${(c-f).toFixed(1)}"/></svg>`;}
+
+function renderDashboard(){
+  const user=Auth.getUser(),today=todayStr(),d=dateObj(today);
+  document.getElementById('welcomeTitle').textContent='Welcome back, '+(user.isGuest?'Guest':user.name.split(' ')[0])+'!';
+  document.getElementById('welcomeDate').textContent=DAY_SHORT[d.getDay()]+', '+d.getDate()+' '+MONTH_FULL[d.getMonth()]+' '+d.getFullYear();
+  const av=document.getElementById('navAvatar');
+  if(user.picture&&!user.isGuest)av.innerHTML=`<img src="${user.picture}" alt="">`;else av.textContent=user.name.charAt(0).toUpperCase();
+  document.getElementById('statStreak').textContent=calcStreak();
+  const th=getHabitToday();
+  document.getElementById('statHabitPct').textContent=th?Math.round((hCompletion(th.health)+sCompletion(th.sadhana))/2)+'%':'0%';
+  const mp=getMealPlan(),wk=getWeekDates(today);
+  let mc=0;wk.forEach(dt=>{const dy=mp[dt];if(dy)mc+=['breakfast','lunch','snack','dinner'].filter(s=>dy[s]).length;});
+  document.getElementById('statMealsPlanned').textContent=mc;
+  renderHabitSummary(th);renderMealWeekGrid(wk,mp,today);renderGroceryPreview(wk,mp);
+}
+
+function renderHabitSummary(day){
+  const card=document.getElementById('habitSummaryCard');
+  if(!day){card.innerHTML='<div class="no-data-msg">No habits logged yet today. <a href="index.html" style="color:#60a5fa">Start tracking →</a></div>';return;}
+  const h=day.health||{},s=day.sadhana||{},hP=hCompletion(h),sP=sCompletion(s);
+  const items=[{label:'Sleep',done:!!(h.sleep_time&&h.wake_time)},{label:'Steps',done:h.steps>0},{label:'Meals',done:!!(h.breakfast||h.lunch||h.dinner)},{label:'Guru Pooja',done:s.guru_pooja},{label:'Upa Yoga',done:s.upa_yoga},{label:'Surya Kriya',done:s.surya_kriya},{label:'Yoga Namaskar',done:s.yoga_namaskar},{label:'SCK',done:s.sck}];
+  card.innerHTML=`<div style="display:flex;gap:1.5rem;margin-bottom:1rem;">
+    <div class="mini-ring-wrap">${miniRing(hP,'#34d399')}<div><div style="font-size:.8rem;font-weight:600">Health</div><div style="font-size:.7rem;color:var(--text2)">${hP}%</div></div></div>
+    <div class="mini-ring-wrap">${miniRing(sP,'#a78bfa')}<div><div style="font-size:.8rem;font-weight:600">Sadhana</div><div style="font-size:.7rem;color:var(--text2)">${sP}%</div></div></div>
+  </div><div class="habit-row">${items.map(i=>`<div class="habit-item"><div class="habit-dot ${i.done?'dot-done':'dot-empty'}"></div><span style="color:${i.done?'var(--text)':'var(--text3)'}">${i.label}</span></div>`).join('')}</div>`;
+}
+
+function renderMealWeekGrid(wk,mp,today){
+  document.getElementById('mealWeekGrid').innerHTML=wk.map(dt=>{
+    const d=dateObj(dt),dy=mp[dt]||{};
+    const slots=['breakfast','lunch','snack','dinner'];
+    return`<a href="meal-planner.html" class="meal-day-card${dt===today?' today':''}"><div class="mdc-name">${DAY_SHORT[d.getDay()]}</div><div class="mdc-num">${d.getDate()}</div><div class="mdc-dots">${slots.map(s=>`<div class="mdc-dot${dy[s]?' filled':''}"></div>`).join('')}</div></a>`;
+  }).join('');
+}
+
+function renderGroceryPreview(wk,mp){
+  const preview=document.getElementById('groceryPreview');
+  let recipeMap={};try{const r=localStorage.getItem('meal_recipes_v1');if(r)recipeMap=JSON.parse(r);}catch{}
+  const ingMap={};
+  wk.forEach(dt=>{const dy=mp[dt]||{};['breakfast','lunch','snack','dinner'].forEach(slot=>{const rId=dy[slot];if(!rId)return;const r=recipeMap[rId];if(!r||!r.ingredients)return;r.ingredients.forEach(ing=>{const k=ing.name.toLowerCase();if(ingMap[k])ingMap[k].amount+=ing.amount;else ingMap[k]={...ing};});});});
+  const items=Object.values(ingMap);
+  if(!items.length){preview.innerHTML='<div class="grocery-empty">Plan some meals to auto-generate your grocery list.</div>';return;}
+  const top6=items.slice(0,6),rem=items.length-6;
+  preview.innerHTML=`<ul class="grocery-list-preview">${top6.map(i=>`<li><span class="grocery-cat-badge">${i.category||'misc'}</span> ${Number.isInteger(i.amount)?i.amount:i.amount.toFixed(1)} ${i.unit} ${i.name}</li>`).join('')}${rem>0?`<li style="color:var(--text3);font-style:italic">+${rem} more items…</li>`:''}</ul><a href="meal-planner.html#grocery" class="view-all-btn">View Full Grocery List →</a>`;
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const login=document.getElementById('loginScreen'),app=document.getElementById('appScreen');
+  function showApp(){login.style.display='none';app.classList.add('visible');renderDashboard();}
+  if(Auth.isLoggedIn()){showApp();}
+  else{
+    if(!Auth.isConfigured()){document.getElementById('oauthNote').textContent='Google Sign-In not configured — see hint below.';document.getElementById('setupHint').style.display='block';}
+    window.addEventListener('load',()=>{
+      Auth.initGoogle(()=>showApp(),err=>{document.getElementById('oauthNote').textContent=err==='not_configured'?'Configure auth.js to enable Google Sign-In':'Google Sign-In unavailable';});
+      if(!Auth.renderGoogleButton('google-btn-container'))document.getElementById('google-btn-container').innerHTML='<div style="font-size:.8rem;color:var(--text3);padding:.5rem">Google Sign-In not yet configured</div>';
+    });
+  }
+  document.getElementById('guestBtn').addEventListener('click',()=>{Auth.loginGuest();showApp();});
+  document.getElementById('logoutBtn').addEventListener('click',()=>{Auth.logout();app.classList.remove('visible');login.style.display='flex';});
+});
+</script>
+</body>
+</html>
