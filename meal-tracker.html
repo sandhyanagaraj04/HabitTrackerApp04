@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>Meal Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="meal-tracker.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="top-nav">
+  <div class="nav-left">
+    <a href="dashboard.html" class="nav-back">← Dashboard</a>
+    <div class="nav-title">🍽️ <span>Meal Tracker</span></div>
+  </div>
+</nav>
+
+<!-- DATE BAR -->
+<div class="date-bar">
+  <button class="date-arrow" id="prevDay">‹</button>
+  <div class="date-center">
+    <div class="date-label" id="dateLabel">Today</div>
+    <div class="date-full" id="dateFull"></div>
+  </div>
+  <button class="date-arrow" id="nextDay">›</button>
+  <button class="today-btn" id="todayBtn">Today</button>
+</div>
+
+<!-- WEEK STRIP -->
+<div class="week-strip" id="weekStrip"></div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- STREAKS -->
+  <div class="streak-row">
+    <div class="streak-card">
+      <div class="streak-val streak-fire" id="streakCurrent">0</div>
+      <div class="streak-label">🔥 Current streak</div>
+    </div>
+    <div class="streak-card">
+      <div class="streak-val streak-best" id="streakBest">0</div>
+      <div class="streak-label">⭐ Longest streak</div>
+    </div>
+    <div class="streak-card">
+      <div class="streak-val streak-week" id="streakWeek">0%</div>
+      <div class="streak-label">📅 This week</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-bar">
+    <button class="tab-btn active" data-tab="log">Today's Log</button>
+    <button class="tab-btn" data-tab="summary">Week Summary</button>
+    <button class="tab-btn" data-tab="heatmap">Heatmap</button>
+    <button class="tab-btn" data-tab="history">History</button>
+  </div>
+
+  <!-- LOG TAB -->
+  <div class="tab-panel" data-panel="log">
+    <div class="section-title-row">
+      <span class="section-title">Meals</span>
+      <span class="day-score" id="dayScore">0/4 meals</span>
+    </div>
+    <div id="mealCards"></div>
+  </div>
+
+  <!-- WEEK SUMMARY TAB -->
+  <div class="tab-panel" data-panel="summary" style="display:none">
+    <div class="weekly-card" id="weeklySummary"></div>
+  </div>
+
+  <!-- HEATMAP TAB -->
+  <div class="tab-panel" data-panel="heatmap" style="display:none">
+    <div class="heatmap-section">
+      <div class="heatmap-wrap">
+        <div class="section-title">Last 90 days</div>
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+        <div class="hm-legend">
+          Less
+          <div class="hm-legend-cells">
+            <div class="hm-legend-cell" style="background:var(--surface2)"></div>
+            <div class="hm-legend-cell" style="background:rgba(52,211,153,.2)"></div>
+            <div class="hm-legend-cell" style="background:rgba(52,211,153,.45)"></div>
+            <div class="hm-legend-cell" style="background:rgba(52,211,153,.7)"></div>
+            <div class="hm-legend-cell" style="background:#34d399"></div>
+          </div>
+          More
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div class="tab-panel" data-panel="history" style="display:none">
+    <div id="historyList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="meal-tracker.js"></script>
+</body>
+</html>
