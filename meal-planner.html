@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>Meal Planner — Habit & Meal Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="meal-planner.css">
+  <script src="auth.js"></script>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="top-nav">
+  <div class="nav-left">
+    <a href="dashboard.html" class="nav-back">← Dashboard</a>
+    <div class="nav-brand">🥗 <span>Meal Planner</span></div>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user-name" id="navUserName"></span>
+  </div>
+</nav>
+
+<!-- ── LAYOUT ── -->
+<div class="mp-layout">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="mp-sidebar">
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab active" data-tab="recipes">Recipes</button>
+      <button class="sidebar-tab" data-tab="grocery">Grocery List</button>
+    </div>
+
+    <!-- Recipes Panel -->
+    <div class="sidebar-panel active" id="recipesPanel">
+      <div class="search-bar">
+        <input type="text" class="search-input" id="recipeSearch" placeholder="Search recipes…">
+      </div>
+      <div class="filter-pills">
+        <button class="filter-pill active" data-cat="all">All</button>
+        <button class="filter-pill" data-cat="breakfast">Breakfast</button>
+        <button class="filter-pill" data-cat="lunch">Lunch</button>
+        <button class="filter-pill" data-cat="dinner">Dinner</button>
+        <button class="filter-pill" data-cat="snack">Snack</button>
+      </div>
+      <div id="recipeList"></div>
+    </div>
+
+    <!-- Grocery Panel -->
+    <div class="sidebar-panel" id="groceryPanel">
+      <!-- rendered by JS -->
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="mp-main">
+    <!-- View Bar -->
+    <div class="view-bar">
+      <button class="view-nav-btn" id="prevPeriod">‹</button>
+      <div class="view-title" id="viewTitle"></div>
+      <button class="view-nav-btn" id="nextPeriod">›</button>
+      <button class="view-nav-btn" id="todayBtn" title="Jump to today" style="font-size:0.72rem;width:auto;padding:0 0.6rem;">Today</button>
+      <div class="view-toggle">
+        <button class="view-toggle-btn active" data-view="week">Week</button>
+        <button class="view-toggle-btn" data-view="month">Month</button>
+      </div>
+    </div>
+
+    <!-- Week View -->
+    <div class="week-view" id="weekView">
+      <div class="week-grid" id="weekGrid"></div>
+    </div>
+
+    <!-- Month View -->
+    <div class="month-view" id="monthView" style="display:none">
+      <div class="month-header-row">
+        <div class="month-day-label">Mon</div>
+        <div class="month-day-label">Tue</div>
+        <div class="month-day-label">Wed</div>
+        <div class="month-day-label">Thu</div>
+        <div class="month-day-label">Fri</div>
+        <div class="month-day-label">Sat</div>
+        <div class="month-day-label">Sun</div>
+      </div>
+      <div class="month-grid" id="monthGrid"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ── RECIPE DETAIL MODAL ── -->
+<div class="modal-overlay" id="recipeModal">
+  <div class="recipe-modal">
+    <div class="modal-header">
+      <div class="modal-emoji" id="modalEmoji">🥣</div>
+      <div class="modal-title-group">
+        <div class="modal-title" id="modalTitle">Recipe Name</div>
+        <div class="modal-tags" id="modalTags"></div>
+      </div>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Meta -->
+      <div class="modal-meta-row">
+        <div class="meta-item"><div class="meta-val" id="modalPrepTime">—</div><div class="meta-label">Prep</div></div>
+        <div class="meta-item"><div class="meta-val" id="modalCookTime">—</div><div class="meta-label">Cook</div></div>
+        <div class="meta-item"><div class="meta-val" id="modalServings">—</div><div class="meta-label">Serves</div></div>
+        <div class="meta-item"><div class="meta-val" id="modalCalories">—</div><div class="meta-label">Calories</div></div>
+      </div>
+
+      <!-- Nutrition -->
+      <div class="modal-section-title">Nutrition per serving</div>
+      <div class="nutrition-row">
+        <div class="nutrition-item"><div class="nutrition-val" id="modalProtein">—</div><div class="nutrition-label">Protein</div></div>
+        <div class="nutrition-item"><div class="nutrition-val" id="modalCarbs">—</div><div class="nutrition-label">Carbs</div></div>
+        <div class="nutrition-item"><div class="nutrition-val" id="modalFat">—</div><div class="nutrition-label">Fat</div></div>
+        <div class="nutrition-item"><div class="nutrition-val" id="modalFiber">—</div><div class="nutrition-label">Fiber</div></div>
+      </div>
+
+      <!-- Ingredients -->
+      <div class="modal-section-title">Ingredients</div>
+      <ul class="ingredients-list" id="modalIngredients"></ul>
+
+      <!-- Instructions -->
+      <div class="modal-section-title">Instructions</div>
+      <ol class="instructions-list" id="modalInstructions"></ol>
+
+      <!-- Assign to plan -->
+      <div class="modal-assign-section">
+        <div class="modal-assign-title">📅 Add to meal plan</div>
+        <div class="assign-slots" id="assignSlots"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SLOT PICKER MODAL ── -->
+<div class="modal-overlay" id="slotPickerModal">
+  <div class="slot-picker-modal">
+    <div class="slot-picker-title" id="slotPickerTitle"></div>
+    <div class="slot-picker-sub" id="slotPickerSub"></div>
+    <div class="slot-picker-grid" id="slotPickerGrid"></div>
+    <button class="slot-picker-cancel" id="slotPickerCancel">Cancel</button>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script src="meal-planner.js"></script>
+</body>
+</html>
