@@ -61,10 +61,10 @@
       <span class="nav-icon">📋</span>
       <span class="nav-label">Daily Planner</span>
     </button>
-    <button class="nav-item" data-tab="meal">
+    <a class="nav-item" href="meal-planner.html" style="text-decoration:none">
       <span class="nav-icon">🥗</span>
       <span class="nav-label">Meal Planner</span>
-    </button>
+    </a>
 
   </nav>
 
@@ -514,49 +514,6 @@
 
   </section>
 
-  <!-- ── MEAL PLANNER TAB ───────────────────────────── -->
-  <section class="tab-section" id="tab-meal">
-
-    <!-- Top bar -->
-    <div class="mpp-topbar">
-      <div class="mpp-topbar-left">
-        <span class="mpp-emoji">🥗</span>
-        <h2 class="mpp-title">Meal Planner</h2>
-      </div>
-      <div class="mpp-topbar-right">
-        <div class="mpp-servings-ctrl">
-          <span class="mpp-servings-label">Servings</span>
-          <div class="mpp-stepper">
-            <button class="mpp-step-btn" id="mppServingsDown">−</button>
-            <span class="mpp-step-val" id="mppServingsVal">2</span>
-            <button class="mpp-step-btn" id="mppServingsUp">＋</button>
-          </div>
-        </div>
-        <button class="mpp-grocery-btn" id="mppGroceryBtn">🛒 Grocery</button>
-      </div>
-    </div>
-
-    <!-- Week nav -->
-    <div class="mpp-week-nav">
-      <button class="mpp-nav-btn" id="mppPrevWeek">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <span class="mpp-week-label" id="mppWeekLabel">…</span>
-      <button class="mpp-nav-btn" id="mppNextWeek">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-    </div>
-
-    <!-- Day cards -->
-    <div class="mpp-days" id="mppDays"></div>
-
-    <!-- Manage meals -->
-    <div class="mpp-manage-row">
-      <button class="mpp-manage-btn" id="mppManageMealsBtn">＋ Add / manage meals</button>
-    </div>
-
-  </section>
-
   <!-- ── EXPORT TAB ─────────────────────────────────── -->
   <section class="tab-section" id="tab-export">
 
@@ -801,49 +758,6 @@
   </div>
 </div>
 
-<!-- ── MEAL ADD/EDIT MODAL ───────────────────────────────── -->
-<div class="modal-overlay" id="recipeModal" style="display:none">
-  <div class="modal recipe-modal">
-    <h2 class="modal-title" id="recipeModalTitle">Add Meal</h2>
-
-    <div class="field">
-      <label class="field-label">Meal Name</label>
-      <input type="text" class="input-text" id="recipeName" placeholder="e.g. Masala Oats" maxlength="60">
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field">
-        <label class="field-label">Cuisine (optional)</label>
-        <input type="text" class="input-text" id="recipeCuisine" placeholder="e.g. Indian" maxlength="40">
-      </div>
-      <div class="field">
-        <label class="field-label">Prep time (min)</label>
-        <input type="number" class="input-text" id="recipePrepTime" placeholder="15" min="0" max="300">
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="field-label">Default servings</label>
-      <div class="mpp-stepper" style="width:fit-content">
-        <button class="mpp-step-btn" id="recipeServDown">−</button>
-        <span class="mpp-step-val" id="recipeServVal">2</span>
-        <button class="mpp-step-btn" id="recipeServUp">＋</button>
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="field-label">Ingredients</label>
-      <div id="recipeIngredientRows"></div>
-      <button class="mp-add-ing-btn" id="addIngredientRowBtn">＋ Add ingredient</button>
-    </div>
-
-    <div style="display:flex;gap:10px;margin-top:20px">
-      <button class="modal-btn modal-btn-cancel" id="recipeCancelBtn" style="flex:1">Cancel</button>
-      <button class="modal-btn modal-btn-confirm" id="recipeSaveBtn" style="flex:1">Save</button>
-    </div>
-  </div>
-</div>
-
 <!-- ── HEALTH HABIT ADD/EDIT MODAL ─────────────────────── -->
 <div class="modal-overlay" id="healthHabitModal" style="display:none">
   <div class="modal" style="max-width:360px;padding:28px">
@@ -859,77 +773,6 @@
     <div style="display:flex;gap:10px">
       <button class="modal-btn modal-btn-cancel" id="hhCancel" style="flex:1">Cancel</button>
       <button class="modal-btn modal-btn-confirm" id="hhSave" style="flex:1">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── MEAL PICKER SHEET ─────────────────────────── -->
-<div class="mpp-overlay" id="mppPickerOverlay">
-  <div class="mpp-sheet" id="mppPickerSheet">
-    <div class="mpp-sheet-pill"></div>
-    <div class="mpp-sheet-hdr">
-      <span class="mpp-sheet-title" id="mppPickerTitle">Choose a meal</span>
-      <button class="mpp-sheet-x" id="mppPickerClose">✕</button>
-    </div>
-    <div class="mpp-search-wrap">
-      <input class="mpp-search-input" id="mppPickerSearch" type="text" placeholder="Search meals…" autocomplete="off">
-    </div>
-    <div class="mpp-picker-scroll" id="mppPickerList"></div>
-    <div class="mpp-sheet-foot">
-      <button class="mpp-sheet-action" id="mppAddMealFromPicker">＋ New meal</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── INGREDIENT SHEET ──────────────────────────── -->
-<div class="mpp-overlay" id="mppIngOverlay">
-  <div class="mpp-sheet" id="mppIngSheet">
-    <div class="mpp-sheet-pill"></div>
-    <div class="mpp-sheet-hdr">
-      <div class="mpp-ing-hdr-left">
-        <span class="mpp-sheet-title" id="mppIngTitle">Ingredients</span>
-        <div class="mpp-ing-serv-row">
-          <span class="mpp-ing-serv-label">Servings</span>
-          <button class="mpp-step-btn mpp-step-sm" id="mppIngServDown">−</button>
-          <span class="mpp-step-val" id="mppIngServVal">2</span>
-          <button class="mpp-step-btn mpp-step-sm" id="mppIngServUp">＋</button>
-        </div>
-      </div>
-      <button class="mpp-sheet-x" id="mppIngClose">✕</button>
-    </div>
-    <div class="mpp-ing-scroll" id="mppIngList"></div>
-  </div>
-</div>
-
-<!-- ── GROCERY SHEET ─────────────────────────────── -->
-<div class="mpp-overlay" id="mppGroceryOverlay">
-  <div class="mpp-sheet mpp-sheet-tall" id="mppGrocerySheet">
-    <div class="mpp-sheet-pill"></div>
-    <div class="mpp-sheet-hdr">
-      <div>
-        <span class="mpp-sheet-title">🛒 Grocery List</span>
-        <div class="mpp-grocery-week-lbl" id="mppGroceryWeekLabel"></div>
-      </div>
-      <button class="mpp-sheet-x" id="mppGroceryClose">✕</button>
-    </div>
-    <div class="mpp-grocery-scroll" id="mppGroceryList"></div>
-    <div class="mpp-sheet-foot">
-      <button class="mpp-order-btn" id="mppOrderBtn">🛍️ Order ingredients</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── ORDER PROVIDER SHEET ──────────────────────── -->
-<div class="mpp-overlay" id="mppOrderOverlay">
-  <div class="mpp-sheet mpp-sheet-compact" id="mppOrderSheet">
-    <div class="mpp-sheet-pill"></div>
-    <div class="mpp-sheet-hdr">
-      <span class="mpp-sheet-title">Order via</span>
-      <button class="mpp-sheet-x" id="mppOrderClose">✕</button>
-    </div>
-    <div class="mpp-providers" id="mppProviderList"></div>
-    <div class="mpp-sheet-foot">
-      <button class="mpp-copy-btn" id="mppCopyListBtn">📋 Copy grocery list</button>
     </div>
   </div>
 </div>
