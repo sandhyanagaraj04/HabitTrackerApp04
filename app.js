@@ -285,6 +285,8 @@ function renderHeader() {
   document.getElementById('dateFull').textContent = formatDateFull(currentDate);
   document.getElementById('nextDay').disabled = currentDate >= today;
   document.getElementById('streakDisplay').textContent = calcStreak();
+  const btn = document.getElementById('backToTodayBtn');
+  if (btn) btn.style.display = isToday(currentDate) ? 'none' : 'inline-flex';
   renderWeekStrip();
 }
 
@@ -2448,6 +2450,9 @@ function init() {
   document.getElementById('nextDay').addEventListener('click', () => {
     if (currentDate < todayStr()) navigateTo(offsetDate(currentDate, 1));
   });
+  document.getElementById('backToTodayBtn')?.addEventListener('click', () =>
+    navigateTo(todayStr())
+  );
 
   /* Sadhana UI & events */
   renderSadhanaUI();

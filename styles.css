@@ -335,6 +335,27 @@ body {
 
 .date-center { text-align: center; flex: 1; }
 
+.back-to-today-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 4px auto 0;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--health);
+  background: rgba(52,211,153,0.1);
+  border: 1px solid rgba(52,211,153,0.25);
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  transition: background var(--transition), border-color var(--transition);
+}
+.back-to-today-btn:hover {
+  background: rgba(52,211,153,0.18);
+  border-color: rgba(52,211,153,0.4);
+}
+
 .date-label {
   font-size: 11px;
   font-weight: 600;
