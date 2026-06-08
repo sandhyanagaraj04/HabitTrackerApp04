@@ -393,10 +393,16 @@
           <span class="card-emoji">🗓️</span>
           <h2 class="card-title">Day Schedule</h2>
         </div>
-        <button class="jump-now-btn" id="plannerJumpNowBtn" title="Jump to current time">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Now
-        </button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="gsheets-export-btn" id="plannerSheetsBtn" title="Sync all planner data to Google Sheets">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+            Sync to Sheets
+          </button>
+          <button class="jump-now-btn" id="plannerJumpNowBtn" title="Jump to current time">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Now
+          </button>
+        </div>
       </div>
       <div class="voice-warn" id="plannerVoiceWarn" style="display:none">
         ⚠️ Voice input not supported in this browser. Use typing instead.

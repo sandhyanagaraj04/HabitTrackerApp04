@@ -1913,6 +1913,126 @@ function startPlannerVoice(slotKey) {
   recognition.start();
 }
 
+/* ── GOOGLE SHEETS EXPORT ───────────────────────────────── */
+let _sheetsToken    = null;
+let _sheetsTokenExp = 0;
+
+async function acquireSheetsToken() {
+  if (_sheetsToken && Date.now() < _sheetsTokenExp) return _sheetsToken;
+  if (!FIREBASE_CONFIGURED || !auth) throw new Error('no_auth');
+
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.addScope('https://www.googleapis.com/auth/spreadsheets');
+  if (auth.currentUser?.email) {
+    provider.setCustomParameters({ login_hint: auth.currentUser.email });
+  }
+  const result = await auth.signInWithPopup(provider);
+  _sheetsToken    = result.credential.accessToken;
+  _sheetsTokenExp = Date.now() + 55 * 60 * 1000;
+  return _sheetsToken;
+}
+
+async function getPlannerSheetId() {
+  if (!FIREBASE_CONFIGURED) return localStorage.getItem('plannerSheetId') || null;
+  try {
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    return doc.data()?.plannerSheetId || null;
+  } catch { return null; }
+}
+
+async function setPlannerSheetId(id) {
+  if (!FIREBASE_CONFIGURED) { localStorage.setItem('plannerSheetId', id); return; }
+  await db.collection('users').doc(currentUser.uid).set({ plannerSheetId: id }, { merge: true });
+}
+
+async function createPlannerSheet(token) {
+  const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      properties: { title: 'Habit Tracker — Daily Planner' },
+      sheets: [{ properties: { title: 'Planner', gridProperties: { frozenRowCount: 1 } } }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw Object.assign(new Error('create_failed'), { apiErr: err.error });
+  }
+  return (await res.json()).spreadsheetId;
+}
+
+async function syncPlannerToSheet(token, sheetId) {
+  const rows = [['Date', 'Time', 'Plan', 'Actual']];
+
+  Object.keys(data).sort().forEach(date => {
+    const planner = data[date]?.planner  || {};
+    const tracker = data[date]?.tracker  || {};
+    const allKeys = new Set([
+      ...Object.keys(planner),
+      ...Object.keys(tracker)
+    ]);
+    [...allKeys].sort().forEach(key => {
+      const plan   = planner[key] || '';
+      const actual = tracker[key] || '';
+      if (!plan && !actual) return;
+      const hh = key.slice(0, 2), mm = key.slice(2, 4);
+      rows.push([date, `${hh}:${mm}`, plan, actual]);
+    });
+  });
+
+  const range = encodeURIComponent('Planner!A:D');
+  await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:clear`,
+    { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }
+  );
+
+  const writeRes = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=RAW`,
+    {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: rows })
+    }
+  );
+  if (!writeRes.ok) {
+    const err = await writeRes.json().catch(() => ({}));
+    throw Object.assign(new Error('write_failed'), { apiErr: err.error });
+  }
+}
+
+async function exportPlannerToSheets() {
+  if (!FIREBASE_CONFIGURED || !currentUser) {
+    showToast('⚠️ Sign in required to export to Google Sheets');
+    return;
+  }
+  const btn = document.getElementById('plannerSheetsBtn');
+  const orig = btn?.innerHTML;
+  if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
+
+  try {
+    const token   = await acquireSheetsToken();
+    let   sheetId = await getPlannerSheetId();
+    if (!sheetId) {
+      sheetId = await createPlannerSheet(token);
+      await setPlannerSheetId(sheetId);
+    }
+    await syncPlannerToSheet(token, sheetId);
+    showToast('✅ Synced to Google Sheets');
+    window.open(`https://docs.google.com/spreadsheets/d/${sheetId}`, '_blank');
+  } catch (err) {
+    const ae = err.apiErr;
+    if (ae?.status === 'PERMISSION_DENIED' || ae?.code === 403) {
+      showToast('⚠️ Enable the Google Sheets API in Google Cloud Console first', 5000);
+    } else if (err.message === 'no_auth') {
+      showToast('⚠️ Sign in required');
+    } else {
+      showToast('❌ Sync failed — ' + (ae?.message || err.message));
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+  }
+}
+
 /* ── FULL RENDER ────────────────────────────────────────── */
 function renderAll() {
   renderHeader();
@@ -2144,12 +2264,12 @@ function setQuickRange(days) {
 
 /* ── TOAST ──────────────────────────────────────────────── */
 let toastTimer;
-function showToast(msg) {
+function showToast(msg, duration = 2800) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  toastTimer = setTimeout(() => t.classList.remove('show'), duration);
 }
 
 /* ── CONFIRM MODAL ──────────────────────────────────────── */
@@ -2442,6 +2562,9 @@ function init() {
     const cur = document.querySelector('#plannerSlots .current-slot');
     if (cur) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
+
+  /* Sync planner to Google Sheets */
+  document.getElementById('plannerSheetsBtn')?.addEventListener('click', exportPlannerToSheets);
 
   /* Date navigation */
   document.getElementById('prevDay').addEventListener('click', () =>
